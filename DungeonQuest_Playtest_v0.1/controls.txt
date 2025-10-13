@@ -1,0 +1,36 @@
+=== DUNGEON QUEST RPG - CONTROLS ===
+
+EXPLORATION
+-----------
+W/A/S/D     Move
+Z           Interact (stairs, treasure, boss)
+X           Leave dungeon
+Enter       Camp menu (use tent, view stats)
+Tab         Inventory
+
+BATTLE
+------
+1           Attack
+2           Skill/Magic
+3           Item
+4           Defend
+5           Flee (not vs bosses)
+
+MAP SYMBOLS
+-----------
+@   You
+#   Wall
+.   Floor
+>   Stairs down
+<   Stairs up
+$   Treasure
+B   Boss
+E   Entrance
+
+TIPS
+----
+- Mix physical and magic classes
+- Save MP for bosses
+- Use tents to rest between floors
+- Characters learn skills as they level
+- Explore thoroughly for treasure
