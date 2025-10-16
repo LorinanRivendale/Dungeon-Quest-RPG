@@ -6,7 +6,7 @@ LDFLAGS =
 TARGET = rpg_game
 
 # Directories
-SRCDIR = src
+SRCDIR = SRC
 OBJDIR = obj
 
 # Source files
