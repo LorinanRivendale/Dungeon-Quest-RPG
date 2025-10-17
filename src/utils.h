@@ -28,12 +28,17 @@ typedef enum {
 
 InputButton input_get_key(void);
 void input_wait_for_key(void);
+void input_flush_buffer(void);
 
 // Display utilities (text-based for PC)
 void display_text(const char* text);
 void display_menu(const char* title, const char** options, uint8_t option_count, uint8_t selected);
 void display_party_status(void);
 void display_battle_scene(void);
+void display_battle_turn_indicator(const char* actor_name);
 void display_dungeon(void);
+
+// Cursor-based menu (returns selected index, or -1 if cancelled)
+int8_t cursor_menu(const char* title, const char** options, uint8_t option_count);
 
 #endif // UTILS_H

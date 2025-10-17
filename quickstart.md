@@ -69,11 +69,12 @@ Learn the controls by exploring
 
 Phase 2: First Dungeon (10 minutes)
 
-Walk around to trigger random encounters
+Walk around (battles occur every 15-30 steps)
 Fight 3-5 battles to reach level 2-3
 Find treasure chests on each floor
-Locate and use stairs to descend
-Find and defeat the Earth Golem boss
+Locate stairs (press Z to use them)
+Press Enter to access Camp menu and save progress
+Find and defeat the Earth Golem boss (marked 'B')
 Obtain Earth Crystal
 
 Phase 3: Building Strength (10 minutes)
@@ -121,21 +122,51 @@ Save/load not implemented yet
 Consider leveling up more before boss fights
 
 Controls Reference
-Main Controls (Dungeon)
-CopyW, A, S, D    - Move (Up, Left, Down, Right)
-Z or Space    - Interact with objects
-X or ESC      - Back/Cancel
-Enter         - View Party Status
-Tab           - Open Inventory
-Battle Controls
-Copy1 - Attack       (Choose enemy target)
-2 - Defend       (Reduce damage taken)
-3 - Item         (Use healing items)
-4 - Flee         (50% chance, not available vs bosses)
-Menu Navigation
-CopyNumber Keys   - Select menu options
-Enter         - Confirm
-ESC           - Cancel/Back
+
+Dungeon Exploration
+```
+W, A, S, D    - Move (Up, Left, Down, Right)
+Z or Space    - Interact with tiles (stairs, treasure, boss)
+X or ESC      - Leave dungeon (with confirmation)
+Enter or I    - Open menu
+```
+
+Menu Navigation (NEW: Cursor-Based!)
+```
+W / S         - Move cursor up/down
+Enter or Z    - Select highlighted option
+X or ESC      - Cancel / Go back one level
+```
+
+Dungeon Menu Options
+```
+> Camp          - Rest, heal, and save game
+> Inventory     - Manage items and equipment
+> Party Status  - View detailed character stats
+> Return        - Return to dungeon exploration
+```
+
+Battle Controls (NEW: Cursor-Based!)
+```
+W / S         - Move cursor through actions and targets
+Enter or Z    - Select action or target
+X or ESC      - Cancel selection (return to action menu)
+
+Actions:
+  Attack      - Select enemy target with cursor
+  Skill/Magic - Choose skill, then target with cursor
+  Item        - Choose item, then party member with cursor
+  Defend      - Reduce damage taken this turn
+  Flee        - Attempt escape (50% chance, not available vs bosses)
+```
+
+Dungeon Selection Menu (NEW: Cursor-Based!)
+```
+W / S         - Move cursor through dungeons and menu options
+Enter or Z    - Select dungeon or menu option
+X or ESC      - Stay in menu (can't exit from top level)
+Options include: Inventory, Party Status, Save, Load, Quit
+```
 Test Scenarios
 Quick Test (5 minutes)
 Goal: Verify game is working

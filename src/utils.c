@@ -81,7 +81,7 @@ InputButton input_get_key(void) {
             case 'z': case 'Z': case ' ': return INPUT_A;
             case 'x': case 'X': case 27: return INPUT_B; // ESC
             case 13: return INPUT_START; // Enter
-            case '\t': return INPUT_SELECT;
+            case '\t': case 'i': case 'I': return INPUT_SELECT;
         }
     }
 #else
@@ -111,7 +111,7 @@ InputButton input_get_key(void) {
             case 'z': case 'Z': case ' ': return INPUT_A;
             case 'x': case 'X': case 27: return INPUT_B;
             case '\n': return INPUT_START;
-            case '\t': return INPUT_SELECT;
+            case '\t': case 'i': case 'I': return INPUT_SELECT;
         }
     }
 #endif
@@ -122,14 +122,26 @@ InputButton input_get_key(void) {
 void input_wait_for_key(void) {
     printf("\nPress any key to continue...");
     fflush(stdout);
-    
+
 #ifdef _WIN32
     _getch();
 #else
     getchar();
 #endif
-    
+
     printf("\n");
+}
+
+void input_flush_buffer(void) {
+    // Flush stdin to clear any leftover input (like newlines from scanf)
+#ifdef _WIN32
+    while (_kbhit()) {
+        _getch();
+    }
+#else
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+#endif
 }
 
 void display_text(const char* text) {
@@ -173,34 +185,111 @@ void display_party_status(void) {
 }
 
 void display_battle_scene(void) {
-    printf("\n=== BATTLE ===\n");
-    
-    // Display enemies
+    // GameBoy-style battle screen layout (4 quadrants)
+    // Top: Enemy sprites (left) | Enemy HP/Stats (right)
+    // Bottom: Party sprites (left) | Party HP/MP + Menu (right)
+
+    printf("\n");
+    printf("┌─────────────────────────────────┬─────────────────────────────────┐\n");
+    printf("│ ENEMY SPRITES                   │ ENEMY HP / STATS                │\n");
+    printf("├─────────────────────────────────┼─────────────────────────────────┤\n");
+
+    // Display enemies (both sides)
     if (g_battle_state.is_boss_battle && g_battle_state.boss) {
-        printf("\nBOSS: %s\n", g_battle_state.boss->name);
-        printf("HP: %d/%d\n", g_battle_state.boss->current_hp, g_battle_state.boss->max_hp);
+        // Boss battle
+        printf("│                                 │ BOSS: %-25s │\n", g_battle_state.boss->name);
+        printf("│         [BOSS SPRITE]           │ HP: %4d/%4d                     │\n",
+               g_battle_state.boss->current_hp, g_battle_state.boss->max_hp);
+        printf("│                                 │                                 │\n");
+        printf("│                                 │                                 │\n");
     } else {
-        printf("\nEnemies:\n");
-        for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
-            Enemy* enemy = &g_battle_state.enemies[i];
-            if (enemy->is_alive) {
-                printf("%d. %s (HP: %d/%d)\n", i+1, enemy->name, 
-                       enemy->current_hp, enemy->max_hp);
+        // Regular enemies (show up to 4)
+        for (uint8_t i = 0; i < 4; i++) {
+            if (i < g_battle_state.enemy_count) {
+                Enemy* enemy = &g_battle_state.enemies[i];
+                if (enemy->is_alive) {
+                    printf("│   [%c]%-26s │ %d.%-15s HP:%4d/%4d │\n",
+                           'A' + i, enemy->name, i+1, enemy->name,
+                           enemy->current_hp, enemy->max_hp);
+                } else {
+                    printf("│   [X]%-26s │ %d.%-15s [DEFEATED]    │\n",
+                           enemy->name, i+1, enemy->name);
+                }
             } else {
-                printf("%d. %s (DEFEATED)\n", i+1, enemy->name);
+                printf("│                                 │                                 │\n");
             }
         }
     }
-    
-    // Display party
-    printf("\nYour Party:\n");
-    for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
-        PartyMember* member = &g_game_state.party->members[i];
-        if (member->stats.current_hp > 0) {
-            printf("%d. %s (HP: %d/%d)\n", i+1, member->name,
-                   member->stats.current_hp, member->stats.max_hp);
+
+    printf("├─────────────────────────────────┼─────────────────────────────────┤\n");
+    printf("│ PARTY SPRITES                   │ PARTY HP / MP                   │\n");
+    printf("├─────────────────────────────────┼─────────────────────────────────┤\n");
+
+    // Display party members (both sides)
+    for (uint8_t i = 0; i < 4; i++) {
+        if (i < g_game_state.party->member_count) {
+            PartyMember* member = &g_game_state.party->members[i];
+            char sprite_char = (member->stats.current_hp > 0) ? '@' : 'X';
+
+            // Left side: sprite representation
+            // Right side: HP/MP stats
+            if (member->stats.current_hp > 0) {
+                printf("│   [%c]%-26s │ %-12s HP:%4d/%4d MP:%3d/%3d│\n",
+                       sprite_char, member->name, member->name,
+                       member->stats.current_hp, member->stats.max_hp,
+                       member->stats.current_mp, member->stats.max_mp);
+            } else {
+                printf("│   [%c]%-26s │ %-12s [DOWN]                │\n",
+                       sprite_char, member->name, member->name);
+            }
         } else {
-            printf("%d. %s (DOWN)\n", i+1, member->name);
+            printf("│                                 │                                 │\n");
+        }
+    }
+
+    printf("└─────────────────────────────────┴─────────────────────────────────┘\n");
+}
+
+void display_battle_turn_indicator(const char* actor_name) {
+    printf("\n>>> %s's TURN <<<\n", actor_name);
+}
+
+int8_t cursor_menu(const char* title, const char** options, uint8_t option_count) {
+    uint8_t cursor = 0;
+
+    while (1) {
+        clear_screen();
+        printf("\n=== %s ===\n\n", title);
+
+        for (uint8_t i = 0; i < option_count; i++) {
+            if (i == cursor) {
+                printf("> %s\n", options[i]);
+            } else {
+                printf("  %s\n", options[i]);
+            }
+        }
+
+        printf("\nControls: W/S=Move Cursor, Enter/Z=Select, X/Esc=Cancel\n");
+
+        InputButton input = INPUT_NONE;
+        while (input == INPUT_NONE) {
+            input = input_get_key();
+        }
+
+        switch (input) {
+            case INPUT_UP:
+                if (cursor > 0) cursor--;
+                break;
+            case INPUT_DOWN:
+                if (cursor < option_count - 1) cursor++;
+                break;
+            case INPUT_A: // Z or Space
+            case INPUT_START: // Enter
+                return cursor;
+            case INPUT_B: // X or Escape
+                return -1; // Cancelled
+            default:
+                break;
         }
     }
 }
@@ -275,5 +364,5 @@ void display_dungeon(void) {
     // Map legend
     printf("\nLegend: @ = You, # = Wall, . = Floor, > = Down, < = Up\n");
     printf("        $ = Treasure, B = Boss, E = Entrance\n");
-    printf("\nControls: WASD=Move, Z=Interact, X=Back, Enter=Party, Tab=Inventory\n");
+    printf("\nControls: WASD=Move, Z=Interact, X=Back, Enter/I=Menu\n");
 }

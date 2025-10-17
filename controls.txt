@@ -2,19 +2,43 @@
 
 EXPLORATION
 -----------
-W/A/S/D     Move
-Z           Interact (stairs, treasure, boss)
-X           Leave dungeon
-Enter       Camp menu (use tent, view stats)
-Tab         Inventory
+W/A/S/D     Move character
+Z / Space   Interact with tile (stairs, treasure, boss)
+X / Escape  Leave dungeon (with confirmation)
+Enter / I   Open menu
 
-BATTLE
-------
-1           Attack
-2           Skill/Magic
-3           Item
-4           Defend
-5           Flee (not vs bosses)
+MENU NAVIGATION (Cursor-Based)
+-------------------------------
+W / S       Move cursor up/down
+Enter / Z   Select highlighted option
+X / Escape  Cancel / Go back one level
+
+DUNGEON MENU
+------------
+> Camp          Access rest, healing, and save options
+> Inventory     Manage items and equipment
+> Party Status  View detailed character stats
+> Return        Return to dungeon exploration
+
+CAMP SUBMENU
+------------
+> View Party Status  See party HP/MP/status
+> Use Tent          Fully restore party HP/MP
+> Save Game         Save to slot 1, 2, or suspend save
+> Return            Back to dungeon menu
+
+BATTLE (Cursor-Based)
+---------------------
+W / S       Move cursor up/down through actions
+Enter / Z   Select action
+X / Escape  Cancel selection (return to action menu)
+
+Actions:
+> Attack        Choose target with cursor
+> Skill/Magic   Choose skill, then target with cursor
+> Item          Choose item, then target with cursor
+> Defend        Reduce damage taken this turn
+> Flee          Attempt to escape (not available vs bosses)
 
 MAP SYMBOLS
 -----------

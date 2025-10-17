@@ -33,12 +33,17 @@ int main(void) {
     int title_choice;
     scanf("%d", &title_choice);
 
+    bool game_loaded = false;
+
     if (title_choice == 2) {
         // Load game
         handle_load_menu();
 
-        // If no game was loaded (cancelled or failed), start new game
-        if (!g_game_state.party || g_game_state.party->member_count == 0) {
+        // Check if game was actually loaded
+        if (g_game_state.party && g_game_state.party->member_count > 0 && g_game_state.inventory) {
+            game_loaded = true;
+        } else {
+            // If no game was loaded (cancelled or failed), start new game
             printf("\nNo game loaded. Starting new game...\n");
             input_wait_for_key();
             game_state_change(STATE_PARTY_SELECT);
@@ -49,25 +54,28 @@ int main(void) {
         game_state_change(STATE_PARTY_SELECT);
         handle_party_selection();
     }
-    
+
     if (!g_game_state.party || g_game_state.party->member_count == 0) {
         printf("No party members selected. Exiting.\n");
         game_state_cleanup();
         return 0;
     }
-    
-    // Create inventory
-	g_game_state.inventory = inventory_create();
 
-	// Give starting equipment to party
-	inventory_give_starting_equipment(g_game_state.inventory, g_game_state.party);
+    // Only create inventory and give starting equipment for NEW games (not loaded games)
+    if (!game_loaded) {
+        // Create inventory
+        g_game_state.inventory = inventory_create();
 
-	// Add starting items
-	inventory_add_item(g_game_state.inventory, ITEM_POTION, 10);
-	inventory_add_item(g_game_state.inventory, ITEM_HI_POTION, 3);
-	inventory_add_item(g_game_state.inventory, ITEM_ETHER, 5);
-	inventory_add_item(g_game_state.inventory, ITEM_ANTIDOTE, 3);
-	inventory_add_item(g_game_state.inventory, ITEM_TENT, 2);
+        // Give starting equipment to party
+        inventory_give_starting_equipment(g_game_state.inventory, g_game_state.party);
+
+        // Add starting items
+        inventory_add_item(g_game_state.inventory, ITEM_POTION, 10);
+        inventory_add_item(g_game_state.inventory, ITEM_HI_POTION, 3);
+        inventory_add_item(g_game_state.inventory, ITEM_ETHER, 5);
+        inventory_add_item(g_game_state.inventory, ITEM_ANTIDOTE, 3);
+        inventory_add_item(g_game_state.inventory, ITEM_TENT, 2);
+    }
     
     // Main game loop
     bool game_running = true;
@@ -190,83 +198,204 @@ void handle_party_selection(void) {
     game_state_change(STATE_DUNGEON_SELECT);
 }
 
-void handle_dungeon_selection(void) {
+void handle_town(void) {
+    bool in_town = true;
+
+    while (in_town) {
+        clear_screen();
+        printf("\n=== TOWN ===\n");
+        printf("Welcome to the town!\n\n");
+
+        const char* town_options[] = {
+            "Inn - Rest and recover (Cost: 50 Gold)",
+            "Item Shop - Buy and sell items",
+            "Tavern - Talk to locals",
+            "Leave Town"
+        };
+
+        int8_t choice = cursor_menu("TOWN", town_options, 4);
+
+        switch (choice) {
+            case 0: // Inn
+                handle_inn();
+                break;
+            case 1: // Item Shop
+                handle_item_shop();
+                break;
+            case 2: // Tavern
+                handle_tavern();
+                break;
+            case 3: // Leave Town
+            case -1: // Cancelled
+                in_town = false;
+                break;
+        }
+    }
+}
+
+void handle_inn(void) {
     clear_screen();
-    printf("\n=== DUNGEON SELECTION ===\n");
-    printf("Select a dungeon to explore:\n\n");
-    
-    // Show available dungeons
-    for (int i = 0; i < MAX_DUNGEONS; i++) {
-        printf("%d. %s ", i + 1, dungeon_names[i]);
-        if (g_game_state.dungeons_completed[i]) {
-            printf("[COMPLETED]");
+    printf("\n=== INN ===\n");
+    printf("Welcome to the inn!\n\n");
+    printf("Rest and recover all HP/MP for 50 Gold?\n");
+    printf("Current Gold: %d\n\n", g_game_state.gold);
+
+    if (g_game_state.gold < 50) {
+        printf("You don't have enough gold!\n");
+        input_wait_for_key();
+        return;
+    }
+
+    printf("Press Z/Enter to confirm, X/Esc to cancel\n");
+
+    InputButton confirm = INPUT_NONE;
+    while (confirm == INPUT_NONE) {
+        confirm = input_get_key();
+    }
+
+    if (confirm == INPUT_A || confirm == INPUT_START) {
+        g_game_state.gold -= 50;
+
+        // Heal all party members
+        for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+            PartyMember* member = &g_game_state.party->members[i];
+            member->stats.current_hp = member->stats.max_hp;
+            member->stats.current_mp = member->stats.max_mp;
         }
-        printf("\n");
-    }
-    
-    // Show final dungeon if unlocked
-    if (is_final_dungeon_unlocked()) {
-        printf("%d. %s [FINAL DUNGEON]\n", MAX_DUNGEONS + 1, dungeon_names[MAX_DUNGEONS]);
-    }
-    
-    printf("\nKey Items Collected: %d/4\n", __builtin_popcount(g_game_state.key_items_collected));
 
-    printf("\nSelect dungeon (1-%d), I=Inventory, P=Party, S=Save, L=Load, or 0 to quit: ",
-           is_final_dungeon_unlocked() ? MAX_DUNGEONS + 1 : MAX_DUNGEONS);
-
-    char input_str[10];
-    scanf("%s", input_str);
-
-    if (input_str[0] == 'I' || input_str[0] == 'i') {
-        handle_inventory_menu();
-        return;
-    } else if (input_str[0] == 'P' || input_str[0] == 'p') {
-        display_party_status();
+        printf("\nYou rest at the inn. Your party is fully recovered!\n");
         input_wait_for_key();
-        return;
-    } else if (input_str[0] == 'S' || input_str[0] == 's') {
-        handle_save_menu();
-        return;
-    } else if (input_str[0] == 'L' || input_str[0] == 'l') {
-        handle_load_menu();
-        return;
     }
+}
 
-    int choice = atoi(input_str);
+void handle_item_shop(void) {
+    clear_screen();
+    printf("\n=== ITEM SHOP ===\n");
+    printf("Item shop is not yet implemented.\n");
+    printf("(Coming soon: Buy and sell consumable items)\n");
+    input_wait_for_key();
+}
 
-    if (choice == 0) {
-        printf("Exiting to title...\n");
-        input_wait_for_key();
-        game_state_change(STATE_GAME_OVER);
-        return;
-    }
-    
-    choice--; // Convert to 0-based index
-    
-    if (choice < 0 || choice > MAX_DUNGEONS) {
-        printf("Invalid selection.\n");
-        input_wait_for_key();
-        return;
-    }
-    
-    // Check if final dungeon
-    if (choice == MAX_DUNGEONS) {
-        if (!is_final_dungeon_unlocked()) {
-            printf("The Final Sanctum is still sealed!\n");
+void handle_tavern(void) {
+    clear_screen();
+    printf("\n=== TAVERN ===\n");
+    printf("The tavern is quiet today.\n");
+    printf("(Coming soon: Talk to NPCs and receive quests)\n");
+    input_wait_for_key();
+}
+
+void handle_dungeon_selection(void) {
+    bool in_dungeon_select = true;
+
+    while (in_dungeon_select) {
+        clear_screen();
+        printf("\n=== DUNGEON SELECTION ===\n");
+        printf("Key Items Collected: %d/4\n\n", __builtin_popcount(g_game_state.key_items_collected));
+
+        // Build menu options
+        const char* menu_options[12]; // Max: town + 4 dungeons + final + separator + inventory + party + save + load + quit
+        uint8_t option_count = 0;
+        int8_t dungeon_indices[6]; // Map menu index to dungeon index
+
+        // Add Town option first
+        menu_options[option_count++] = "Town";
+
+        // Add separator
+        menu_options[option_count++] = "---";
+
+        // Add dungeons (indices will be offset by 2 due to Town and separator)
+        uint8_t dungeon_option_start = option_count;
+        for (int i = 0; i < MAX_DUNGEONS; i++) {
+            static char dungeon_labels[4][50];
+            if (g_game_state.dungeons_completed[i]) {
+                snprintf(dungeon_labels[i], 50, "%s [COMPLETED]", dungeon_names[i]);
+            } else {
+                snprintf(dungeon_labels[i], 50, "%s", dungeon_names[i]);
+            }
+            menu_options[option_count] = dungeon_labels[i];
+            dungeon_indices[option_count - dungeon_option_start] = i;
+            option_count++;
+        }
+
+        // Add final dungeon if unlocked
+        static char final_label[50];
+        if (is_final_dungeon_unlocked()) {
+            snprintf(final_label, 50, "%s [FINAL DUNGEON]", dungeon_names[MAX_DUNGEONS]);
+            menu_options[option_count] = final_label;
+            dungeon_indices[option_count - dungeon_option_start] = MAX_DUNGEONS;
+            option_count++;
+        }
+
+        // Add menu options
+        menu_options[option_count++] = "---";
+        menu_options[option_count++] = "Inventory";
+        menu_options[option_count++] = "Party Status";
+        menu_options[option_count++] = "Save Game";
+        menu_options[option_count++] = "Load Game";
+        menu_options[option_count++] = "Quit Game";
+
+        int8_t choice = cursor_menu("DUNGEON SELECTION", menu_options, option_count);
+
+        // Handle Town selection
+        if (choice == 0) {
+            // Town selected - call town handler
+            handle_town();
+            continue;
+        }
+
+        // Skip separator at index 1
+        // Dungeons start at index 2
+
+        // Determine which dungeon was selected (if any)
+        // Account for Town (index 0) and separator (index 1) - dungeons start at index 2
+        uint8_t dungeon_start_index = 2;
+        uint8_t dungeon_menu_count = is_final_dungeon_unlocked() ? MAX_DUNGEONS + 1 : MAX_DUNGEONS;
+
+        if (choice >= dungeon_start_index && choice < dungeon_start_index + dungeon_menu_count) {
+            // A dungeon was selected
+            int dungeon_idx = dungeon_indices[choice - dungeon_start_index];
+
+            // Initialize dungeon if needed
+            if (!g_game_state.dungeon_initialized[dungeon_idx]) {
+                uint8_t floor_count = (dungeon_idx == MAX_DUNGEONS) ? 5 : 3;
+                dungeon_init(&g_game_state.dungeons[dungeon_idx], dungeon_idx,
+                           dungeon_names[dungeon_idx], floor_count);
+                g_game_state.dungeon_initialized[dungeon_idx] = true;
+            }
+
+            g_game_state.current_dungeon_index = dungeon_idx;
+            game_state_change(STATE_DUNGEON_EXPLORE);
+            in_dungeon_select = false;
+        } else if (choice == dungeon_start_index + dungeon_menu_count + 1) {
+            // Inventory (skip separator)
+            handle_inventory_menu();
+        } else if (choice == dungeon_start_index + dungeon_menu_count + 2) {
+            // Party Status
+            clear_screen();
+            display_party_status();
             input_wait_for_key();
-            return;
+        } else if (choice == dungeon_start_index + dungeon_menu_count + 3) {
+            // Save Game
+            handle_save_menu();
+        } else if (choice == dungeon_start_index + dungeon_menu_count + 4) {
+            // Load Game
+            handle_load_menu();
+        } else if (choice == dungeon_start_index + dungeon_menu_count + 5) {
+            // Quit Game
+            printf("\nReally quit? (Press Z/Enter to confirm, X/Esc to cancel)\n");
+            InputButton confirm = INPUT_NONE;
+            while (confirm == INPUT_NONE) {
+                confirm = input_get_key();
+            }
+            if (confirm == INPUT_A || confirm == INPUT_START) {
+                game_state_change(STATE_GAME_OVER);
+                in_dungeon_select = false;
+            }
+        } else {
+            // Cancelled (pressed X/Esc at top level)
+            // Just loop back to menu
         }
     }
-    
-    // Initialize dungeon if it hasn't been initialized yet
-    if (!g_game_state.dungeon_initialized[choice]) {
-        uint8_t floor_count = (choice == MAX_DUNGEONS) ? 5 : 3;
-        dungeon_init(&g_game_state.dungeons[choice], choice, dungeon_names[choice], floor_count);
-        g_game_state.dungeon_initialized[choice] = true;
-    }
-
-    g_game_state.current_dungeon_index = choice;
-    game_state_change(STATE_DUNGEON_EXPLORE);
 }
 
 void handle_dungeon_exploration(void) {
@@ -276,7 +405,10 @@ void handle_dungeon_exploration(void) {
         game_state_change(STATE_DUNGEON_SELECT);
         return;
     }
-    
+
+    // Flush input buffer to prevent leftover newlines from scanf triggering INPUT_START
+    input_flush_buffer();
+
     bool in_dungeon = true;
     
     while (in_dungeon) {
@@ -374,45 +506,76 @@ void handle_dungeon_exploration(void) {
                 break;
                 
             case INPUT_SELECT:
-				// Open inventory
-				handle_inventory_menu();
-				break;
-                
             case INPUT_START:
-    // Camp menu
-			printf("\n=== CAMP ===\n");
-			printf("1. View Party Status\n");
-			printf("2. Use Tent\n");
-			printf("3. Save Game\n");
-			printf("4. Return\n");
-			printf("Select: ");
+				// Open dungeon menu (cursor-based, no scanf!)
+				{
+					bool in_dungeon_menu = true;
+					while (in_dungeon_menu) {
+						const char* menu_options[] = {
+							"Camp",
+							"Inventory",
+							"Party Status",
+							"Return to Dungeon"
+						};
 
-			int camp_choice;
-			scanf("%d", &camp_choice);
+						int8_t choice = cursor_menu("DUNGEON MENU", menu_options, 4);
 
-			if (camp_choice == 1) {
-				display_party_status();
-				input_wait_for_key();
-			} else if (camp_choice == 2) {
-				int8_t tent_index = inventory_find_item(g_game_state.inventory, ITEM_TENT);
-				if (tent_index >= 0) {
-					printf("Use tent to rest? (Y/N): ");
-					char confirm;
-					scanf(" %c", &confirm);
-					if (confirm == 'Y' || confirm == 'y') {
-						party_heal_all(g_game_state.party);
-						inventory_remove_item(g_game_state.inventory, tent_index, 1);
-						printf("Party is fully rested!\n");
-						input_wait_for_key();
+						if (choice == 0) {
+							// Camp submenu - loop until user returns
+							bool in_camp = true;
+							while (in_camp) {
+								const char* camp_options[] = {
+									"View Party Status",
+									"Use Tent",
+									"Save Game",
+									"Return"
+								};
+
+								int8_t camp_choice = cursor_menu("CAMP", camp_options, 4);
+
+								if (camp_choice == 0) {
+									// View party status
+									clear_screen();
+									display_party_status();
+									input_wait_for_key();
+								} else if (camp_choice == 1) {
+									// Use tent
+									int8_t tent_index = inventory_find_item(g_game_state.inventory, ITEM_TENT);
+									if (tent_index >= 0) {
+										party_heal_all(g_game_state.party);
+										inventory_remove_item(g_game_state.inventory, tent_index, 1);
+										printf("\nParty is fully rested!\n");
+										input_wait_for_key();
+									} else {
+										printf("\nNo tents available!\n");
+										input_wait_for_key();
+									}
+								} else if (camp_choice == 2) {
+									// Save game - still uses scanf for now
+									handle_save_menu();
+								} else {
+									// camp_choice == 3 (Return) or -1 (cancelled)
+									in_camp = false;
+								}
+							}
+							// After exiting camp, loop back to dungeon menu
+						} else if (choice == 1) {
+							// Inventory - still uses scanf for now
+							handle_inventory_menu();
+							// After inventory, loop back to dungeon menu
+						} else if (choice == 2) {
+							// Party Status from dungeon menu
+							clear_screen();
+							display_party_status();
+							input_wait_for_key();
+							// Loop back to dungeon menu
+						} else {
+							// choice == 3 (Return to Dungeon) or -1 (cancelled)
+							in_dungeon_menu = false;
+						}
 					}
-				} else {
-					printf("No tents available!\n");
-					input_wait_for_key();
 				}
-			} else if (camp_choice == 3) {
-				handle_save_menu();
-			}
-			break;
+				break;
                 
             default:
                 break;
@@ -465,83 +628,244 @@ void handle_battle_phase(void) {
             g_battle_state.current_turn = (g_battle_state.current_turn + 1) % g_battle_state.turn_count;
             continue;
         }
-        
-        printf("\n%s's turn!\n", current_member->name);
-		printf("\n1. Attack\n");
-		printf("2. Skill/Magic\n");
-		printf("3. Item\n");
-		printf("4. Defend\n");
-		printf("5. Flee\n");
-		printf("\nSelect action: ");
 
-		int action_choice;
-		scanf("%d", &action_choice);
+        // Show whose turn it is
+        display_battle_turn_indicator(current_member->name);
+
+		// Build action menu (inline, no screen clear)
+		const char* action_options[] = {
+			"Attack",
+			"Skill/Magic",
+			"Item",
+			"Defend",
+			"Flee"
+		};
+
+		// Display action menu inline
+		printf("\n=== BATTLE ACTION ===\n\n");
+		uint8_t action_cursor = 0;
+		int8_t action_choice = -1;
+
+		while (action_choice == -1) {
+			// Show menu options
+			for (uint8_t i = 0; i < 5; i++) {
+				if (i == action_cursor) {
+					printf("> %s\n", action_options[i]);
+				} else {
+					printf("  %s\n", action_options[i]);
+				}
+			}
+			printf("\nW/S=Move, Enter/Z=Select\n");
+
+			InputButton input = INPUT_NONE;
+			while (input == INPUT_NONE) {
+				input = input_get_key();
+			}
+
+			switch (input) {
+				case INPUT_UP:
+					if (action_cursor > 0) {
+						action_cursor--;
+						// Redraw entire battle screen
+						clear_screen();
+						display_battle_scene();
+						display_battle_turn_indicator(current_member->name);
+						printf("\n=== BATTLE ACTION ===\n\n");
+					}
+					break;
+				case INPUT_DOWN:
+					if (action_cursor < 4) {
+						action_cursor++;
+						// Redraw entire battle screen
+						clear_screen();
+						display_battle_scene();
+						display_battle_turn_indicator(current_member->name);
+						printf("\n=== BATTLE ACTION ===\n\n");
+					}
+					break;
+				case INPUT_A: // Z
+				case INPUT_START: // Enter
+					action_choice = action_cursor;
+					break;
+				default:
+					break;
+			}
+		}
+
+		if (action_choice == -1) {
+			// Cancelled - shouldn't happen in battle, just continue
+			continue;
+		}
 
 		BattleAction action;
 		action.actor_index = current_member_index;
 
 		switch (action_choice) {
-			case 1: // Attack
+			case 0: // Attack
 				action.type = ACTION_ATTACK;
-				
+
 				// Select target
 				if (g_battle_state.is_boss_battle) {
 					action.target_index = 0;
 				} else {
-					printf("\nSelect target:\n");
+					// Build target menu with alive enemies (inline display)
+					static char enemy_labels[MAX_ENEMIES][50];
+					uint8_t enemy_indices[MAX_ENEMIES];
+					uint8_t alive_count = 0;
+
 					for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
 						if (g_battle_state.enemies[i].is_alive) {
-							printf("%d. %s (HP: %d)\n", i + 1, 
-								   g_battle_state.enemies[i].name,
-								   g_battle_state.enemies[i].current_hp);
+							snprintf(enemy_labels[alive_count], 50, "%s (HP: %d)",
+									 g_battle_state.enemies[i].name,
+									 g_battle_state.enemies[i].current_hp);
+							enemy_indices[alive_count] = i;
+							alive_count++;
 						}
 					}
-					
-					int target;
-					scanf("%d", &target);
-					target--;
-					
-					if (target < 0 || target >= g_battle_state.enemy_count ||
-						!g_battle_state.enemies[target].is_alive) {
-						printf("Invalid target! Attacking next valid enemy.\n");
-						target = battle_find_valid_enemy_target();
+
+					// Inline target selection
+					printf("\n=== SELECT TARGET ===\n\n");
+					uint8_t target_cursor = 0;
+					int8_t target_choice = -1;
+
+					while (target_choice == -1) {
+						for (uint8_t i = 0; i < alive_count; i++) {
+							if (i == target_cursor) {
+								printf("> %s\n", enemy_labels[i]);
+							} else {
+								printf("  %s\n", enemy_labels[i]);
+							}
+						}
+						printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+						InputButton input = INPUT_NONE;
+						while (input == INPUT_NONE) {
+							input = input_get_key();
+						}
+
+						switch (input) {
+							case INPUT_UP:
+								if (target_cursor > 0) {
+									target_cursor--;
+									clear_screen();
+									display_battle_scene();
+									display_battle_turn_indicator(current_member->name);
+									printf("\n=== SELECT TARGET ===\n\n");
+								}
+								break;
+							case INPUT_DOWN:
+								if (target_cursor < alive_count - 1) {
+									target_cursor++;
+									clear_screen();
+									display_battle_scene();
+									display_battle_turn_indicator(current_member->name);
+									printf("\n=== SELECT TARGET ===\n\n");
+								}
+								break;
+							case INPUT_A:
+							case INPUT_START:
+								target_choice = target_cursor;
+								break;
+							case INPUT_B:
+								// Cancelled - go back to action menu
+								target_choice = -2;
+								break;
+							default:
+								break;
+						}
 					}
-					
-					action.target_index = target;
+
+					if (target_choice == -2) {
+						// User cancelled, go back to battle action selection
+						continue;
+					}
+
+					action.target_index = enemy_indices[target_choice];
 				}
-				
+
 				battle_process_action(&action);
 				input_wait_for_key();
 				break;
 				
-			case 2: // Skill/Magic
+			case 1: // Skill/Magic
 				if (current_member->skill_count == 0) {
 					printf("%s has no skills!\n", current_member->name);
 					input_wait_for_key();
 					continue;
 				}
-				
-				printf("\nSkills/Magic:\n");
+
+				// Build skill menu (inline display)
+				static char skill_labels[MAX_SKILLS][80];
+
 				for (uint8_t i = 0; i < current_member->skill_count; i++) {
 					const Skill* skill = get_skill_data(current_member->skills[i]);
 					if (skill) {
-						printf("%d. %s (MP: %d) - %s\n", 
-							   i + 1, skill->name, skill->mp_cost, skill->description);
+						snprintf(skill_labels[i], 80, "%s (MP: %d) - %s",
+								 skill->name, skill->mp_cost, skill->description);
 					}
 				}
-				printf("Current MP: %d/%d\n", current_member->stats.current_mp, current_member->stats.max_mp);
-				
-				printf("\nSelect skill (0 to cancel): ");
-				int skill_choice;
-				scanf("%d", &skill_choice);
-				
-				if (skill_choice <= 0 || skill_choice > current_member->skill_count) {
-					printf("Cancelled.\n");
-					input_wait_for_key();
+
+				// Inline skill selection
+				printf("\n=== SELECT SKILL === (MP: %d/%d)\n\n",
+					   current_member->stats.current_mp, current_member->stats.max_mp);
+				uint8_t skill_cursor = 0;
+				int8_t skill_choice = -1;
+
+				while (skill_choice == -1) {
+					for (uint8_t i = 0; i < current_member->skill_count; i++) {
+						if (i == skill_cursor) {
+							printf("> %s\n", skill_labels[i]);
+						} else {
+							printf("  %s\n", skill_labels[i]);
+						}
+					}
+					printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+					InputButton input = INPUT_NONE;
+					while (input == INPUT_NONE) {
+						input = input_get_key();
+					}
+
+					switch (input) {
+						case INPUT_UP:
+							if (skill_cursor > 0) {
+								skill_cursor--;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== SELECT SKILL === (MP: %d/%d)\n\n",
+									   current_member->stats.current_mp, current_member->stats.max_mp);
+							}
+							break;
+						case INPUT_DOWN:
+							if (skill_cursor < current_member->skill_count - 1) {
+								skill_cursor++;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== SELECT SKILL === (MP: %d/%d)\n\n",
+									   current_member->stats.current_mp, current_member->stats.max_mp);
+							}
+							break;
+						case INPUT_A:
+						case INPUT_START:
+							skill_choice = skill_cursor;
+							break;
+						case INPUT_B:
+							// Cancelled
+							skill_choice = -2;
+							break;
+						default:
+							break;
+					}
+				}
+
+				if (skill_choice == -2) {
+					// User cancelled, go back to action menu
 					continue;
 				}
-				
-				uint8_t skill_id = current_member->skills[skill_choice - 1];
+
+				uint8_t skill_id = current_member->skills[skill_choice];
 				const Skill* selected_skill = get_skill_data(skill_id);
 				
 				if (!selected_skill) {
@@ -569,26 +893,76 @@ void handle_battle_phase(void) {
 						if (g_battle_state.is_boss_battle) {
 							action.target_index = 0;
 						} else {
-							printf("\nSelect target:\n");
+							// Build enemy target menu (inline)
+							static char enemy_skill_labels[MAX_ENEMIES][50];
+							uint8_t enemy_skill_indices[MAX_ENEMIES];
+							uint8_t alive_count = 0;
+
 							for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
 								if (g_battle_state.enemies[i].is_alive) {
-									printf("%d. %s (HP: %d)\n", i + 1,
-										   g_battle_state.enemies[i].name,
-										   g_battle_state.enemies[i].current_hp);
+									snprintf(enemy_skill_labels[alive_count], 50, "%s (HP: %d)",
+											 g_battle_state.enemies[i].name,
+											 g_battle_state.enemies[i].current_hp);
+									enemy_skill_indices[alive_count] = i;
+									alive_count++;
 								}
 							}
-							
-							int target;
-							scanf("%d", &target);
-							target--;
 
-							if (target < 0 || target >= g_battle_state.enemy_count ||
-								!g_battle_state.enemies[target].is_alive) {
-								printf("Invalid target! Targeting next valid enemy.\n");
-								target = battle_find_valid_enemy_target();
+							printf("\n=== SELECT TARGET ===\n\n");
+							uint8_t target_cursor = 0;
+							int8_t target_choice = -1;
+
+							while (target_choice == -1) {
+								for (uint8_t i = 0; i < alive_count; i++) {
+									if (i == target_cursor) {
+										printf("> %s\n", enemy_skill_labels[i]);
+									} else {
+										printf("  %s\n", enemy_skill_labels[i]);
+									}
+								}
+								printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+								InputButton input = INPUT_NONE;
+								while (input == INPUT_NONE) {
+									input = input_get_key();
+								}
+
+								switch (input) {
+									case INPUT_UP:
+										if (target_cursor > 0) {
+											target_cursor--;
+											clear_screen();
+											display_battle_scene();
+											display_battle_turn_indicator(current_member->name);
+											printf("\n=== SELECT TARGET ===\n\n");
+										}
+										break;
+									case INPUT_DOWN:
+										if (target_cursor < alive_count - 1) {
+											target_cursor++;
+											clear_screen();
+											display_battle_scene();
+											display_battle_turn_indicator(current_member->name);
+											printf("\n=== SELECT TARGET ===\n\n");
+										}
+										break;
+									case INPUT_A:
+									case INPUT_START:
+										target_choice = target_cursor;
+										break;
+									case INPUT_B:
+										target_choice = -2;
+										break;
+									default:
+										break;
+								}
 							}
 
-							action.target_index = target;
+							if (target_choice == -2) {
+								continue;
+							}
+
+							action.target_index = enemy_skill_indices[target_choice];
 						}
 					}
 				} else {
@@ -596,22 +970,73 @@ void handle_battle_phase(void) {
 					if (selected_skill->target_all) {
 						action.target_index = 0; // Doesn't matter for AoE
 					} else {
-						printf("\nSelect party member:\n");
+						// Build party member target menu (inline)
+						static char party_labels[MAX_PARTY_SIZE][50];
+
 						for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
 							PartyMember* member = &g_game_state.party->members[i];
-							printf("%d. %s (HP: %d/%d)\n", i + 1, member->name,
-								   member->stats.current_hp, member->stats.max_hp);
+							snprintf(party_labels[i], 50, "%s (HP: %d/%d)",
+									 member->name,
+									 member->stats.current_hp,
+									 member->stats.max_hp);
 						}
-						
-						int target;
-						scanf("%d", &target);
-						target--;
-						
-						if (target < 0 || target >= g_game_state.party->member_count) {
-							target = current_member_index;
+
+						printf("\n=== SELECT TARGET ===\n\n");
+						uint8_t target_cursor = 0;
+						int8_t target_choice = -1;
+
+						while (target_choice == -1) {
+							for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+								if (i == target_cursor) {
+									printf("> %s\n", party_labels[i]);
+								} else {
+									printf("  %s\n", party_labels[i]);
+								}
+							}
+							printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+							InputButton input = INPUT_NONE;
+							while (input == INPUT_NONE) {
+								input = input_get_key();
+							}
+
+							switch (input) {
+								case INPUT_UP:
+									if (target_cursor > 0) {
+										target_cursor--;
+										clear_screen();
+										display_battle_scene();
+										display_battle_turn_indicator(current_member->name);
+										printf("\n=== SELECT TARGET ===\n\n");
+									}
+									break;
+								case INPUT_DOWN:
+									if (target_cursor < g_game_state.party->member_count - 1) {
+										target_cursor++;
+										clear_screen();
+										display_battle_scene();
+										display_battle_turn_indicator(current_member->name);
+										printf("\n=== SELECT TARGET ===\n\n");
+									}
+									break;
+								case INPUT_A:
+								case INPUT_START:
+									target_choice = target_cursor;
+									break;
+								case INPUT_B:
+									// Cancelled - target self
+									target_choice = -2;
+									break;
+								default:
+									break;
+							}
 						}
-						
-						action.target_index = target;
+
+						if (target_choice == -2) {
+							action.target_index = current_member_index;
+						} else {
+							action.target_index = target_choice;
+						}
 					}
 				}
 				
@@ -619,59 +1044,161 @@ void handle_battle_phase(void) {
 				input_wait_for_key();
 				break;
 				
-			case 3: // Item
-				printf("\nItems:\n");
+			case 2: // Item
 				if (g_game_state.inventory->item_count == 0) {
 					printf("No items!\n");
 					input_wait_for_key();
 					continue;
 				}
-				
+
+				// Build item menu (inline)
+				static char item_labels[MAX_INVENTORY_ITEMS][50];
+
 				for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
 					Item* item = &g_game_state.inventory->items[i];
-					printf("%d. %s x%d\n", i + 1, item->name, item->quantity);
+					snprintf(item_labels[i], 50, "%s x%d", item->name, item->quantity);
 				}
-				
-				printf("\nSelect item (0 to cancel): ");
-				int item_choice;
-				scanf("%d", &item_choice);
-				
-				if (item_choice > 0 && item_choice <= g_game_state.inventory->item_count) {
-					printf("\nUse on which party member?\n");
+
+				printf("\n=== SELECT ITEM ===\n\n");
+				uint8_t item_cursor = 0;
+				int8_t item_choice = -1;
+
+				while (item_choice == -1) {
+					for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
+						if (i == item_cursor) {
+							printf("> %s\n", item_labels[i]);
+						} else {
+							printf("  %s\n", item_labels[i]);
+						}
+					}
+					printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+					InputButton input = INPUT_NONE;
+					while (input == INPUT_NONE) {
+						input = input_get_key();
+					}
+
+					switch (input) {
+						case INPUT_UP:
+							if (item_cursor > 0) {
+								item_cursor--;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== SELECT ITEM ===\n\n");
+							}
+							break;
+						case INPUT_DOWN:
+							if (item_cursor < g_game_state.inventory->item_count - 1) {
+								item_cursor++;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== SELECT ITEM ===\n\n");
+							}
+							break;
+						case INPUT_A:
+						case INPUT_START:
+							item_choice = item_cursor;
+							break;
+						case INPUT_B:
+							item_choice = -2;
+							break;
+						default:
+							break;
+					}
+				}
+
+				if (item_choice == -2) {
+					// Cancelled
+					continue;
+				}
+
+				// Select party member to use item on (inline)
+				static char member_labels[MAX_PARTY_SIZE][50];
+
+				for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+					PartyMember* member = &g_game_state.party->members[i];
+					snprintf(member_labels[i], 50, "%s (HP: %d/%d)",
+							 member->name,
+							 member->stats.current_hp,
+							 member->stats.max_hp);
+				}
+
+				printf("\n=== USE ON ===\n\n");
+				uint8_t member_cursor = 0;
+				int8_t member_choice = -1;
+
+				while (member_choice == -1) {
 					for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
-						PartyMember* member = &g_game_state.party->members[i];
-						printf("%d. %s (HP: %d/%d)\n", i + 1, member->name,
-							   member->stats.current_hp, member->stats.max_hp);
+						if (i == member_cursor) {
+							printf("> %s\n", member_labels[i]);
+						} else {
+							printf("  %s\n", member_labels[i]);
+						}
 					}
-					
-					int member_choice;
-					scanf("%d", &member_choice);
-					
-					if (member_choice > 0 && member_choice <= g_game_state.party->member_count) {
-						inventory_use_item(g_game_state.inventory, item_choice - 1, member_choice - 1);
+					printf("\nW/S=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+					InputButton input = INPUT_NONE;
+					while (input == INPUT_NONE) {
+						input = input_get_key();
+					}
+
+					switch (input) {
+						case INPUT_UP:
+							if (member_cursor > 0) {
+								member_cursor--;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== USE ON ===\n\n");
+							}
+							break;
+						case INPUT_DOWN:
+							if (member_cursor < g_game_state.party->member_count - 1) {
+								member_cursor++;
+								clear_screen();
+								display_battle_scene();
+								display_battle_turn_indicator(current_member->name);
+								printf("\n=== USE ON ===\n\n");
+							}
+							break;
+						case INPUT_A:
+						case INPUT_START:
+							member_choice = member_cursor;
+							break;
+						case INPUT_B:
+							member_choice = -2;
+							break;
+						default:
+							break;
 					}
 				}
-				
+
+				if (member_choice != -2) {
+					inventory_use_item(g_game_state.inventory, item_choice, member_choice);
+				}
+
 				// Using item doesn't advance turn in this implementation
 				input_wait_for_key();
 				continue; // Don't advance turn
 				
-			case 4: // Defend
+			case 3: // Defend
 				action.type = ACTION_DEFEND;
 				battle_process_action(&action);
 				input_wait_for_key();
 				break;
-				
-			case 5: // Flee
+
+			case 4: // Flee
 				action.type = ACTION_FLEE;
 				battle_process_action(&action);
 				input_wait_for_key();
-				
+
 				if (g_battle_state.battle_fled) {
 					battle_active = false;
 				}
 				break;
-				
+
 			default:
 				printf("Invalid action!\n");
 				input_wait_for_key();
@@ -779,10 +1306,14 @@ void handle_inventory_menu(void) {
         printf("3. View Equipment Details\n");
         printf("4. Return\n");
         printf("\nSelect: ");
-        
+
         int choice;
-        scanf("%d", &choice);
-        
+        if (scanf("%d", &choice) != 1) {
+            // Clear invalid input
+            input_flush_buffer();
+            continue;
+        }
+
         switch (choice) {
             case 1:
                 if (g_game_state.inventory->item_count == 0) {
@@ -818,8 +1349,9 @@ void handle_inventory_menu(void) {
             case 2:
                 display_party_status();
                 input_wait_for_key();
+                input_flush_buffer();
                 break;
-                
+
             case 3:
                 // Equipment details
                 clear_screen();
@@ -855,18 +1387,21 @@ void handle_inventory_menu(void) {
                            character_get_total_intelligence(member),
                            character_get_total_agility(member));
                 }
-                
+
                 input_wait_for_key();
+                input_flush_buffer();
                 break;
-                
+
             case 4:
+                printf("[DEBUG] Exiting inventory (choice=4)\n");
                 in_inventory = false;
                 game_state_change(STATE_DUNGEON_EXPLORE);
                 break;
-                
+
             default:
                 printf("Invalid choice!\n");
                 input_wait_for_key();
+                input_flush_buffer();
                 break;
         }
     }
