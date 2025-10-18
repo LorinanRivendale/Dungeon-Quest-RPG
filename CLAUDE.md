@@ -176,6 +176,48 @@ When adding features, use fixed-size arrays and static allocation.
 - Skill data in `get_skill_data()` function (party.c)
 - Skills learned at character creation via `character_init_starting_skills()`
 
+### Town System
+- Accessible from main dungeon selection menu (first option)
+- Provides 4 services: Inn, Item Shop, Equipment Shop, Tavern
+- All shop interactions use cursor-based navigation (GameBoy-ready)
+
+**Inn** (`handle_inn()` in main.c)
+- Costs 50 Gold
+- Fully restores all party members' HP and MP
+- Cursor-based confirmation
+
+**Item Shop** (`handle_item_shop()` in main.c)
+- Buy/sell consumable items
+- 6 items available: Potion, Hi-Potion, Ether, Elixir, Antidote, Tent
+- Prices defined in `shop_items[]` static array
+- Sell price = 50% of buy price
+- Category-based browsing
+
+**Equipment Shop** (`handle_equipment_shop()` in main.c)
+- Buy/sell equipment (22 items total)
+- 4 categories: Weapons (10), Armor (6), Helmets (3), Accessories (3)
+- Prices defined in `shop_equipment[]` static array
+- After purchase, option to equip immediately
+- Cannot sell equipped items
+- Equipment IDs defined in inventory.c (EQUIP_DAGGER, etc.)
+
+**Equipment Management** (`handle_equipment_management()` in main.c)
+- Accessible from 3 locations:
+  1. Dungeon camp menu
+  2. Main menu → Party Status
+  3. After equipment purchase in shop
+- Select party member → Select equipment slot → Choose equipment
+- Comparison UI shows stat changes before equipping
+- Displays: Current equipment, New equipment, Stat deltas (ATK/DEF/INT/AGI)
+- Job restrictions enforced (bitfield check in `usable_by_job`)
+- Unequip option when managing equipped items
+
+### Gold Economy
+- Players start with 100 Gold (see `game_state_init()`)
+- Battle rewards: `5 + (enemy_level * 3)` Gold per enemy
+- Boss rewards: `boss_level * 50` Gold
+- Gold added to `g_game_state.gold` in `battle_distribute_rewards()`
+
 ## Development Workflow
 
 ### Adding a New Feature
@@ -194,6 +236,9 @@ When adding features, use fixed-size arrays and static allocation.
 1. Add enum to `ConsumableItem` or create equipment ID in inventory.h
 2. Update `item_create_consumable()` or `item_create_equipment()` in inventory.c
 3. Add to starting inventory or dungeon treasure tables
+4. (Optional) Add to shop inventories:
+   - Item Shop: Add to `shop_items[]` array in main.c with buy/sell prices
+   - Equipment Shop: Add to `shop_equipment[]` array in main.c with prices and description
 
 ### Adding a New Dungeon
 1. Increment `MAX_DUNGEONS` in game_state.h (currently 4)

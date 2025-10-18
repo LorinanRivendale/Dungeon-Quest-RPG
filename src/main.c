@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdbool.h>
+#include <string.h>
 #include <time.h>
 
 void handle_party_selection(void);
@@ -17,6 +18,16 @@ void handle_battle_phase(void);
 void handle_inventory_menu(void);
 void handle_save_menu(void);
 void handle_load_menu(void);
+void handle_town(void);
+void handle_inn(void);
+void handle_item_shop(void);
+void handle_shop_buy(void);
+void handle_shop_sell(void);
+void handle_equipment_shop(void);
+void handle_equipment_buy(void);
+void handle_equipment_sell(void);
+void handle_equipment_management(void);
+void handle_tavern(void);
 
 int main(void) {
     // Initialize game
@@ -208,12 +219,13 @@ void handle_town(void) {
 
         const char* town_options[] = {
             "Inn - Rest and recover (Cost: 50 Gold)",
-            "Item Shop - Buy and sell items",
+            "Item Shop - Buy and sell consumables",
+            "Equipment Shop - Buy and sell equipment",
             "Tavern - Talk to locals",
             "Leave Town"
         };
 
-        int8_t choice = cursor_menu("TOWN", town_options, 4);
+        int8_t choice = cursor_menu("TOWN", town_options, 5);
 
         switch (choice) {
             case 0: // Inn
@@ -222,10 +234,13 @@ void handle_town(void) {
             case 1: // Item Shop
                 handle_item_shop();
                 break;
-            case 2: // Tavern
+            case 2: // Equipment Shop
+                handle_equipment_shop();
+                break;
+            case 3: // Tavern
                 handle_tavern();
                 break;
-            case 3: // Leave Town
+            case 4: // Leave Town
             case -1: // Cancelled
                 in_town = false;
                 break;
@@ -268,12 +283,806 @@ void handle_inn(void) {
     }
 }
 
+// Shop item data structure
+typedef struct {
+    uint8_t item_id;
+    const char* name;
+    uint16_t buy_price;
+    uint16_t sell_price;
+    const char* description;
+} ShopItem;
+
+// Shop inventory (static data)
+static const ShopItem shop_items[] = {
+    {ITEM_POTION, "Potion", 50, 25, "Restores 50 HP"},
+    {ITEM_HI_POTION, "Hi-Potion", 150, 75, "Restores 150 HP"},
+    {ITEM_ETHER, "Ether", 100, 50, "Restores 30 MP"},
+    {ITEM_ELIXIR, "Elixir", 1000, 500, "Fully restores HP/MP"},
+    {ITEM_ANTIDOTE, "Antidote", 30, 15, "Cures poison"},
+    {ITEM_TENT, "Tent", 200, 100, "Fully heals party"}
+};
+#define SHOP_ITEM_COUNT 6
+
 void handle_item_shop(void) {
-    clear_screen();
-    printf("\n=== ITEM SHOP ===\n");
-    printf("Item shop is not yet implemented.\n");
-    printf("(Coming soon: Buy and sell consumable items)\n");
-    input_wait_for_key();
+    bool in_shop = true;
+
+    while (in_shop) {
+        clear_screen();
+        printf("\n=== ITEM SHOP ===\n");
+        printf("Welcome! What can I do for you?\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        const char* shop_options[] = {
+            "Buy Items",
+            "Sell Items",
+            "Leave Shop"
+        };
+
+        int8_t choice = cursor_menu("ITEM SHOP", shop_options, 3);
+
+        switch (choice) {
+            case 0: // Buy
+                handle_shop_buy();
+                break;
+            case 1: // Sell
+                handle_shop_sell();
+                break;
+            case 2: // Leave
+            case -1: // Cancelled
+                in_shop = false;
+                break;
+        }
+    }
+}
+
+void handle_shop_buy(void) {
+    bool buying = true;
+
+    while (buying) {
+        clear_screen();
+        printf("\n=== BUY ITEMS ===\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        // Build buy menu with prices
+        static char buy_options_strings[SHOP_ITEM_COUNT + 1][80];
+        static const char* buy_options[SHOP_ITEM_COUNT + 1];
+
+        for (uint8_t i = 0; i < SHOP_ITEM_COUNT; i++) {
+            snprintf(buy_options_strings[i], 80, "%s - %d Gold (%s)",
+                     shop_items[i].name,
+                     shop_items[i].buy_price,
+                     shop_items[i].description);
+            buy_options[i] = buy_options_strings[i];
+        }
+        snprintf(buy_options_strings[SHOP_ITEM_COUNT], 80, "Back");
+        buy_options[SHOP_ITEM_COUNT] = buy_options_strings[SHOP_ITEM_COUNT];
+
+        int8_t choice = cursor_menu("BUY", buy_options, SHOP_ITEM_COUNT + 1);
+
+        if (choice == -1 || choice == SHOP_ITEM_COUNT) {
+            // Cancelled or Back
+            buying = false;
+        } else if (choice >= 0 && choice < SHOP_ITEM_COUNT) {
+            // Item selected
+            const ShopItem* selected = &shop_items[choice];
+
+            // Check if player has enough gold
+            if (g_game_state.gold < selected->buy_price) {
+                printf("\nNot enough gold!\n");
+                input_wait_for_key();
+                continue;
+            }
+
+            // Check inventory space
+            if (inventory_is_full(g_game_state.inventory)) {
+                printf("\nInventory is full!\n");
+                input_wait_for_key();
+                continue;
+            }
+
+            // Ask for quantity
+            clear_screen();
+            printf("\n=== BUY %s ===\n", selected->name);
+            printf("Price: %d Gold each\n", selected->buy_price);
+            printf("You have: %d Gold\n\n", g_game_state.gold);
+
+            uint16_t max_afford = g_game_state.gold / selected->buy_price;
+            if (max_afford == 0) max_afford = 1; // At least show 1
+
+            printf("How many? (Max: %d)\n", max_afford);
+            printf("Press Z/Enter to buy 1, or X/Esc to cancel\n");
+
+            // For now, just buy 1 at a time (cursor-based)
+            // TODO: Add quantity selection interface later
+            InputButton confirm = INPUT_NONE;
+            while (confirm == INPUT_NONE) {
+                confirm = input_get_key();
+            }
+
+            if (confirm == INPUT_A || confirm == INPUT_START) {
+                // Buy 1
+                uint8_t quantity = 1;
+                uint16_t total_cost = selected->buy_price * quantity;
+
+                g_game_state.gold -= total_cost;
+                inventory_add_item(g_game_state.inventory, selected->item_id, quantity);
+
+                printf("\nPurchased %d x %s for %d Gold!\n", quantity, selected->name, total_cost);
+                printf("Remaining Gold: %d\n", g_game_state.gold);
+                input_wait_for_key();
+            }
+        }
+    }
+}
+
+void handle_shop_sell(void) {
+    bool selling = true;
+
+    while (selling) {
+        clear_screen();
+        printf("\n=== SELL ITEMS ===\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        if (g_game_state.inventory->item_count == 0) {
+            printf("You have no items to sell!\n");
+            input_wait_for_key();
+            return;
+        }
+
+        // Build sell menu from player's inventory
+        static char sell_options_strings[MAX_INVENTORY_ITEMS + 1][80];
+        static const char* sell_options[MAX_INVENTORY_ITEMS + 1];
+        uint8_t sell_count = 0;
+
+        for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
+            Item* item = &g_game_state.inventory->items[i];
+
+            // Find shop price
+            uint16_t sell_price = 0;
+            for (uint8_t j = 0; j < SHOP_ITEM_COUNT; j++) {
+                if (shop_items[j].item_id == item->item_id) {
+                    sell_price = shop_items[j].sell_price;
+                    break;
+                }
+            }
+
+            snprintf(sell_options_strings[sell_count], 80, "%s x%d - %d Gold each",
+                     item->name, item->quantity, sell_price);
+            sell_options[sell_count] = sell_options_strings[sell_count];
+            sell_count++;
+        }
+        snprintf(sell_options_strings[sell_count], 80, "Back");
+        sell_options[sell_count] = sell_options_strings[sell_count];
+
+        int8_t choice = cursor_menu("SELL", sell_options, sell_count + 1);
+
+        if (choice == -1 || choice == sell_count) {
+            // Cancelled or Back
+            selling = false;
+        } else if (choice >= 0 && choice < sell_count) {
+            // Item selected
+            Item* selected_item = &g_game_state.inventory->items[choice];
+
+            // Find sell price
+            uint16_t sell_price = 0;
+            for (uint8_t j = 0; j < SHOP_ITEM_COUNT; j++) {
+                if (shop_items[j].item_id == selected_item->item_id) {
+                    sell_price = shop_items[j].sell_price;
+                    break;
+                }
+            }
+
+            clear_screen();
+            printf("\n=== SELL %s ===\n", selected_item->name);
+            printf("Sell Price: %d Gold each\n", sell_price);
+            printf("You have: %d\n\n", selected_item->quantity);
+
+            printf("Sell 1 for %d Gold?\n", sell_price);
+            printf("Press Z/Enter to confirm, or X/Esc to cancel\n");
+
+            InputButton confirm = INPUT_NONE;
+            while (confirm == INPUT_NONE) {
+                confirm = input_get_key();
+            }
+
+            if (confirm == INPUT_A || confirm == INPUT_START) {
+                // Sell 1
+                g_game_state.gold += sell_price;
+                inventory_remove_item(g_game_state.inventory, choice, 1);
+
+                printf("\nSold %s for %d Gold!\n", selected_item->name, sell_price);
+                printf("Total Gold: %d\n", g_game_state.gold);
+                input_wait_for_key();
+            }
+        }
+    }
+}
+
+// Equipment shop data structure
+typedef struct {
+    uint8_t equip_id;
+    const char* name;
+    uint16_t buy_price;
+    uint16_t sell_price;
+    const char* description;
+    EquipmentType type;
+} ShopEquipment;
+
+// Equipment shop inventory (static data)
+static const ShopEquipment shop_equipment[] = {
+    // Weapons
+    {0, "Dagger", 100, 50, "ATK+5 (All)", EQUIP_TYPE_WEAPON},
+    {1, "Short Sword", 200, 100, "ATK+8 (All)", EQUIP_TYPE_WEAPON},
+    {2, "Long Sword", 500, 250, "ATK+12 (Knight)", EQUIP_TYPE_WEAPON},
+    {3, "Great Sword", 1200, 600, "ATK+18 (Knight)", EQUIP_TYPE_WEAPON},
+    {4, "Staff", 150, 75, "ATK+4, INT+3 (All)", EQUIP_TYPE_WEAPON},
+    {5, "Iron Staff", 400, 200, "ATK+7, INT+5 (All)", EQUIP_TYPE_WEAPON},
+    {6, "Wooden Rod", 250, 125, "ATK+3, INT+5 (Mage/Sage)", EQUIP_TYPE_WEAPON},
+    {7, "Iron Rod", 600, 300, "ATK+5, INT+8 (Mage/Sage)", EQUIP_TYPE_WEAPON},
+    {8, "Nunchaku", 400, 200, "ATK+10 (Black Belt)", EQUIP_TYPE_WEAPON},
+    {9, "Iron Nunchaku", 800, 400, "ATK+15 (Black Belt)", EQUIP_TYPE_WEAPON},
+
+    // Armor
+    {20, "Cloth Armor", 80, 40, "DEF+3 (All)", EQUIP_TYPE_ARMOR},
+    {21, "Leather Armor", 180, 90, "DEF+6 (All)", EQUIP_TYPE_ARMOR},
+    {22, "Chain Mail", 450, 225, "DEF+10 (Knight)", EQUIP_TYPE_ARMOR},
+    {23, "Plate Mail", 1000, 500, "DEF+15 (Knight)", EQUIP_TYPE_ARMOR},
+    {24, "Robe", 200, 100, "DEF+4, INT+2 (Mage/Sage/Priest)", EQUIP_TYPE_ARMOR},
+    {25, "Silk Robe", 500, 250, "DEF+7, INT+4 (Mage/Sage/Priest)", EQUIP_TYPE_ARMOR},
+
+    // Helmets
+    {40, "Leather Cap", 60, 30, "DEF+2 (All)", EQUIP_TYPE_HELMET},
+    {41, "Iron Helm", 300, 150, "DEF+5 (Knight)", EQUIP_TYPE_HELMET},
+    {42, "Wizard Hat", 250, 125, "DEF+2, INT+3 (Mage/Sage)", EQUIP_TYPE_HELMET},
+
+    // Accessories
+    {60, "Power Ring", 400, 200, "ATK+3 (All)", EQUIP_TYPE_ACCESSORY},
+    {61, "Defense Ring", 400, 200, "DEF+3 (All)", EQUIP_TYPE_ACCESSORY},
+    {62, "Luck Ring", 400, 200, "AGI+3 (All)", EQUIP_TYPE_ACCESSORY},
+};
+#define SHOP_EQUIPMENT_COUNT 22
+
+void handle_equipment_shop(void) {
+    bool in_shop = true;
+
+    while (in_shop) {
+        clear_screen();
+        printf("\n=== EQUIPMENT SHOP ===\n");
+        printf("Welcome to the armory!\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        const char* shop_options[] = {
+            "Buy Equipment",
+            "Sell Equipment",
+            "Leave Shop"
+        };
+
+        int8_t choice = cursor_menu("EQUIPMENT SHOP", shop_options, 3);
+
+        switch (choice) {
+            case 0: // Buy
+                handle_equipment_buy();
+                break;
+            case 1: // Sell
+                handle_equipment_sell();
+                break;
+            case 2: // Leave
+            case -1: // Cancelled
+                in_shop = false;
+                break;
+        }
+    }
+}
+
+void handle_equipment_buy(void) {
+    bool buying = true;
+
+    while (buying) {
+        clear_screen();
+        printf("\n=== BUY EQUIPMENT ===\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        // Build category menu
+        const char* category_options[] = {
+            "Weapons",
+            "Armor",
+            "Helmets",
+            "Accessories",
+            "Back"
+        };
+
+        int8_t category = cursor_menu("SELECT CATEGORY", category_options, 5);
+
+        if (category == -1 || category == 4) {
+            // Cancelled or Back
+            buying = false;
+            continue;
+        }
+
+        // Filter equipment by category
+        EquipmentType filter_type;
+        switch (category) {
+            case 0: filter_type = EQUIP_TYPE_WEAPON; break;
+            case 1: filter_type = EQUIP_TYPE_ARMOR; break;
+            case 2: filter_type = EQUIP_TYPE_HELMET; break;
+            case 3: filter_type = EQUIP_TYPE_ACCESSORY; break;
+            default: continue;
+        }
+
+        // Build filtered equipment list
+        static char equip_options_strings[SHOP_EQUIPMENT_COUNT + 1][80];
+        static const char* equip_options[SHOP_EQUIPMENT_COUNT + 1];
+        uint8_t equip_indices[SHOP_EQUIPMENT_COUNT];
+        uint8_t filtered_count = 0;
+
+        for (uint8_t i = 0; i < SHOP_EQUIPMENT_COUNT; i++) {
+            if (shop_equipment[i].type == filter_type) {
+                snprintf(equip_options_strings[filtered_count], 80, "%s - %d Gold (%s)",
+                         shop_equipment[i].name,
+                         shop_equipment[i].buy_price,
+                         shop_equipment[i].description);
+                equip_options[filtered_count] = equip_options_strings[filtered_count];
+                equip_indices[filtered_count] = i;
+                filtered_count++;
+            }
+        }
+        snprintf(equip_options_strings[filtered_count], 80, "Back");
+        equip_options[filtered_count] = equip_options_strings[filtered_count];
+
+        int8_t choice = cursor_menu("BUY EQUIPMENT", equip_options, filtered_count + 1);
+
+        if (choice == -1 || choice == filtered_count) {
+            // Cancelled or Back
+            continue;
+        }
+
+        const ShopEquipment* selected = &shop_equipment[equip_indices[choice]];
+
+        // Check if player has enough gold
+        if (g_game_state.gold < selected->buy_price) {
+            printf("\nNot enough gold!\n");
+            input_wait_for_key();
+            continue;
+        }
+
+        // Check equipment inventory space
+        if (g_game_state.inventory->equipment_count >= MAX_EQUIPMENT_SLOTS) {
+            printf("\nEquipment inventory is full!\n");
+            input_wait_for_key();
+            continue;
+        }
+
+        // Confirm purchase
+        clear_screen();
+        printf("\n=== BUY %s ===\n", selected->name);
+        printf("Price: %d Gold\n", selected->buy_price);
+        printf("You have: %d Gold\n", g_game_state.gold);
+        printf("\n%s\n", selected->description);
+        printf("\nPurchase for %d Gold?\n", selected->buy_price);
+        printf("Press Z/Enter to confirm, or X/Esc to cancel\n");
+
+        InputButton confirm = INPUT_NONE;
+        while (confirm == INPUT_NONE) {
+            confirm = input_get_key();
+        }
+
+        if (confirm == INPUT_A || confirm == INPUT_START) {
+            g_game_state.gold -= selected->buy_price;
+            uint8_t new_equip_idx = g_game_state.inventory->equipment_count;
+            inventory_add_equipment(g_game_state.inventory, selected->equip_id);
+
+            printf("\nPurchased %s for %d Gold!\n", selected->name, selected->buy_price);
+            printf("Remaining Gold: %d\n", g_game_state.gold);
+
+            // Offer to equip the item immediately
+            printf("\nEquip %s now?\n", selected->name);
+            printf("Press Z/Enter to equip, or X/Esc to skip\n");
+
+            InputButton equip_confirm = INPUT_NONE;
+            while (equip_confirm == INPUT_NONE) {
+                equip_confirm = input_get_key();
+            }
+
+            if (equip_confirm == INPUT_A || equip_confirm == INPUT_START) {
+                // Show party member selection
+                clear_screen();
+                printf("\n=== EQUIP %s ===\n\n", selected->name);
+
+                static char member_equip_options[MAX_PARTY_SIZE + 1][80];
+                static const char* member_equip_menu[MAX_PARTY_SIZE + 1];
+
+                for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+                    PartyMember* member = &g_game_state.party->members[i];
+
+                    // Check if this member can use this equipment
+                    Item* new_item = &g_game_state.inventory->equipment[new_equip_idx];
+                    bool can_equip = (new_item->usable_by_job == 0) ||
+                                     (new_item->usable_by_job & (1 << member->job));
+
+                    if (can_equip) {
+                        snprintf(member_equip_options[i], 80, "%s - %s (Lv %d)",
+                                 member->name, job_names[member->job], member->stats.level);
+                    } else {
+                        snprintf(member_equip_options[i], 80, "%s - %s (Lv %d) [CANNOT USE]",
+                                 member->name, job_names[member->job], member->stats.level);
+                    }
+                    member_equip_menu[i] = member_equip_options[i];
+                }
+                snprintf(member_equip_options[g_game_state.party->member_count], 80, "Cancel");
+                member_equip_menu[g_game_state.party->member_count] = member_equip_options[g_game_state.party->member_count];
+
+                int8_t member_choice = cursor_menu("SELECT PARTY MEMBER", member_equip_menu, g_game_state.party->member_count + 1);
+
+                if (member_choice >= 0 && member_choice < g_game_state.party->member_count) {
+                    Item* new_item = &g_game_state.inventory->equipment[new_equip_idx];
+                    PartyMember* selected_member = &g_game_state.party->members[member_choice];
+
+                    // Check if member can use this equipment
+                    if (new_item->usable_by_job != 0 && !(new_item->usable_by_job & (1 << selected_member->job))) {
+                        printf("\n%s cannot equip %s!\n", selected_member->name, new_item->name);
+                        input_wait_for_key();
+                    } else {
+                        // Equip the item
+                        inventory_equip_item(g_game_state.inventory, new_equip_idx, member_choice);
+                        input_wait_for_key();
+                    }
+                }
+            }
+        }
+    }
+}
+
+void handle_equipment_sell(void) {
+    bool selling = true;
+
+    while (selling) {
+        clear_screen();
+        printf("\n=== SELL EQUIPMENT ===\n");
+        printf("Gold: %d\n\n", g_game_state.gold);
+
+        if (g_game_state.inventory->equipment_count == 0) {
+            printf("You have no equipment to sell!\n");
+            input_wait_for_key();
+            return;
+        }
+
+        // Build sell menu from player's equipment inventory
+        static char sell_options_strings[MAX_EQUIPMENT_SLOTS + 1][80];
+        static const char* sell_options[MAX_EQUIPMENT_SLOTS + 1];
+        uint8_t sell_count = 0;
+
+        for (uint8_t i = 0; i < g_game_state.inventory->equipment_count; i++) {
+            Item* equip = &g_game_state.inventory->equipment[i];
+
+            // Find shop price
+            uint16_t sell_price = 0;
+            for (uint8_t j = 0; j < SHOP_EQUIPMENT_COUNT; j++) {
+                if (shop_equipment[j].equip_id == equip->item_id) {
+                    sell_price = shop_equipment[j].sell_price;
+                    break;
+                }
+            }
+
+            // Show equipped status
+            const char* equipped_status = equip->is_equipped ? " [EQUIPPED]" : "";
+            snprintf(sell_options_strings[sell_count], 80, "%s - %d Gold%s",
+                     equip->name, sell_price, equipped_status);
+            sell_options[sell_count] = sell_options_strings[sell_count];
+            sell_count++;
+        }
+        snprintf(sell_options_strings[sell_count], 80, "Back");
+        sell_options[sell_count] = sell_options_strings[sell_count];
+
+        int8_t choice = cursor_menu("SELL EQUIPMENT", sell_options, sell_count + 1);
+
+        if (choice == -1 || choice == sell_count) {
+            // Cancelled or Back
+            selling = false;
+        } else if (choice >= 0 && choice < sell_count) {
+            // Equipment selected
+            Item* selected_equip = &g_game_state.inventory->equipment[choice];
+
+            // Check if equipped
+            if (selected_equip->is_equipped) {
+                printf("\nCannot sell equipped items! Unequip it first.\n");
+                input_wait_for_key();
+                continue;
+            }
+
+            // Find sell price
+            uint16_t sell_price = 0;
+            for (uint8_t j = 0; j < SHOP_EQUIPMENT_COUNT; j++) {
+                if (shop_equipment[j].equip_id == selected_equip->item_id) {
+                    sell_price = shop_equipment[j].sell_price;
+                    break;
+                }
+            }
+
+            clear_screen();
+            printf("\n=== SELL %s ===\n", selected_equip->name);
+            printf("Sell Price: %d Gold\n\n", sell_price);
+
+            printf("Sell for %d Gold?\n", sell_price);
+            printf("Press Z/Enter to confirm, or X/Esc to cancel\n");
+
+            InputButton confirm = INPUT_NONE;
+            while (confirm == INPUT_NONE) {
+                confirm = input_get_key();
+            }
+
+            if (confirm == INPUT_A || confirm == INPUT_START) {
+                g_game_state.gold += sell_price;
+                inventory_remove_equipment(g_game_state.inventory, choice);
+
+                printf("\nSold %s for %d Gold!\n", selected_equip->name, sell_price);
+                printf("Total Gold: %d\n", g_game_state.gold);
+                input_wait_for_key();
+            }
+        }
+    }
+}
+
+void handle_equipment_management(void) {
+    bool managing = true;
+
+    while (managing) {
+        clear_screen();
+        printf("\n=== EQUIPMENT MANAGEMENT ===\n\n");
+
+        // Build party member selection menu
+        static char member_options_strings[MAX_PARTY_SIZE + 1][80];
+        static const char* member_options[MAX_PARTY_SIZE + 1];
+
+        for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+            PartyMember* member = &g_game_state.party->members[i];
+            snprintf(member_options_strings[i], 80, "%s - %s (Lv %d)",
+                     member->name,
+                     job_names[member->job],
+                     member->stats.level);
+            member_options[i] = member_options_strings[i];
+        }
+        snprintf(member_options_strings[g_game_state.party->member_count], 80, "Back");
+        member_options[g_game_state.party->member_count] = member_options_strings[g_game_state.party->member_count];
+
+        int8_t member_choice = cursor_menu("SELECT PARTY MEMBER", member_options, g_game_state.party->member_count + 1);
+
+        if (member_choice == -1 || member_choice == g_game_state.party->member_count) {
+            // Cancelled or Back
+            managing = false;
+            continue;
+        }
+
+        // Manage equipment for selected party member
+        PartyMember* selected_member = &g_game_state.party->members[member_choice];
+        bool managing_member = true;
+
+        while (managing_member) {
+            clear_screen();
+            printf("\n=== %s's EQUIPMENT ===\n", selected_member->name);
+            printf("%s - Level %d\n\n", job_names[selected_member->job], selected_member->stats.level);
+
+            // Show current stats
+            printf("Stats: ATK %d | DEF %d | INT %d | AGI %d\n\n",
+                   character_get_total_attack(selected_member),
+                   character_get_total_defense(selected_member),
+                   character_get_total_intelligence(selected_member),
+                   character_get_total_agility(selected_member));
+
+            // Build equipment slot menu
+            const char* slot_names[] = {"Weapon", "Armor", "Helmet", "Accessory"};
+            static char slot_options_strings[5][80];
+            static const char* slot_options[5];
+
+            for (uint8_t slot = 0; slot < EQUIP_SLOT_COUNT; slot++) {
+                uint8_t equip_idx = selected_member->equipped_items[slot];
+                if (equip_idx != 0xFF && equip_idx < g_game_state.inventory->equipment_count) {
+                    Item* equip = &g_game_state.inventory->equipment[equip_idx];
+                    snprintf(slot_options_strings[slot], 80, "%s: %s", slot_names[slot], equip->name);
+                } else {
+                    snprintf(slot_options_strings[slot], 80, "%s: (None)", slot_names[slot]);
+                }
+                slot_options[slot] = slot_options_strings[slot];
+            }
+            snprintf(slot_options_strings[4], 80, "Back");
+            slot_options[4] = slot_options_strings[4];
+
+            int8_t slot_choice = cursor_menu("SELECT EQUIPMENT SLOT", slot_options, 5);
+
+            if (slot_choice == -1 || slot_choice == 4) {
+                // Cancelled or Back
+                managing_member = false;
+                continue;
+            }
+
+            EquipmentSlot selected_slot = (EquipmentSlot)slot_choice;
+
+            // Build available equipment menu for this slot
+            static char equip_list_strings[MAX_EQUIPMENT_SLOTS + 2][80];
+            static const char* equip_list[MAX_EQUIPMENT_SLOTS + 2];
+            uint8_t equip_indices[MAX_EQUIPMENT_SLOTS];
+            uint8_t available_count = 0;
+            uint8_t equip_count = 0;  // Separate counter for equip_indices
+
+            // Add "Unequip" option if something is equipped
+            uint8_t current_equip_idx = selected_member->equipped_items[selected_slot];
+            if (current_equip_idx != 0xFF) {
+                snprintf(equip_list_strings[0], 80, "(Unequip)");
+                equip_list[0] = equip_list_strings[0];
+                available_count = 1;
+            }
+
+            // Add available equipment for this slot
+            for (uint8_t i = 0; i < g_game_state.inventory->equipment_count; i++) {
+                Item* equip = &g_game_state.inventory->equipment[i];
+
+                // Check if this equipment matches the slot type
+                if ((EquipmentSlot)equip->equip_type != selected_slot) continue;
+
+                // Check if already equipped
+                if (equip->is_equipped) continue;
+
+                // Check job restrictions
+                if (equip->usable_by_job != 0 && !(equip->usable_by_job & (1 << selected_member->job))) {
+                    // Show but mark as unusable
+                    snprintf(equip_list_strings[available_count], 80, "%s [CANNOT USE]", equip->name);
+                } else {
+                    // Show with stat bonuses
+                    char bonus_str[40] = "";
+                    if (equip->attack_bonus > 0) snprintf(bonus_str + strlen(bonus_str), 40 - strlen(bonus_str), " ATK+%d", equip->attack_bonus);
+                    if (equip->defense_bonus > 0) snprintf(bonus_str + strlen(bonus_str), 40 - strlen(bonus_str), " DEF+%d", equip->defense_bonus);
+                    if (equip->intelligence_bonus > 0) snprintf(bonus_str + strlen(bonus_str), 40 - strlen(bonus_str), " INT+%d", equip->intelligence_bonus);
+                    if (equip->agility_bonus > 0) snprintf(bonus_str + strlen(bonus_str), 40 - strlen(bonus_str), " AGI+%d", equip->agility_bonus);
+
+                    snprintf(equip_list_strings[available_count], 80, "%s%s", equip->name, bonus_str);
+                }
+
+                equip_list[available_count] = equip_list_strings[available_count];
+                equip_indices[equip_count] = i;  // Use equip_count instead of available_count
+                available_count++;
+                equip_count++;
+            }
+
+            snprintf(equip_list_strings[available_count], 80, "Back");
+            equip_list[available_count] = equip_list_strings[available_count];
+
+            int8_t equip_choice = cursor_menu("SELECT EQUIPMENT", equip_list, available_count + 1);
+
+            if (equip_choice == -1 || equip_choice == available_count) {
+                // Cancelled or Back
+                continue;
+            }
+
+            // Handle unequip
+            if (current_equip_idx != 0xFF && equip_choice == 0) {
+                inventory_unequip_item(member_choice, selected_slot);
+                printf("\nUnequipped!\n");
+                input_wait_for_key();
+                continue;
+            }
+
+            // Handle equip
+            uint8_t offset = (current_equip_idx != 0xFF) ? 1 : 0;
+            uint8_t inv_idx = equip_indices[equip_choice - offset];
+            Item* selected_equip = &g_game_state.inventory->equipment[inv_idx];
+
+            // Check job restrictions
+            if (selected_equip->usable_by_job != 0 && !(selected_equip->usable_by_job & (1 << selected_member->job))) {
+                printf("\n%s cannot equip %s!\n", selected_member->name, selected_equip->name);
+                input_wait_for_key();
+                continue;
+            }
+
+            // Show comparison screen
+            clear_screen();
+            printf("\n=== EQUIPMENT COMPARISON ===\n");
+            printf("%s - %s\n\n", selected_member->name, job_names[selected_member->job]);
+
+            // Get current stats
+            uint8_t current_atk = character_get_total_attack(selected_member);
+            uint8_t current_def = character_get_total_defense(selected_member);
+            uint8_t current_int = character_get_total_intelligence(selected_member);
+            uint8_t current_agi = character_get_total_agility(selected_member);
+
+            // Calculate new stats (simulate equipping the new item)
+            uint8_t new_atk = current_atk;
+            uint8_t new_def = current_def;
+            uint8_t new_int = current_int;
+            uint8_t new_agi = current_agi;
+
+            // Get current equipment in this slot
+            Item* current_equip = NULL;
+            if (current_equip_idx != 0xFF && current_equip_idx < g_game_state.inventory->equipment_count) {
+                current_equip = &g_game_state.inventory->equipment[current_equip_idx];
+                // Subtract current equipment bonuses
+                new_atk -= current_equip->attack_bonus;
+                new_def -= current_equip->defense_bonus;
+                new_int -= current_equip->intelligence_bonus;
+                new_agi -= current_equip->agility_bonus;
+            }
+
+            // Add new equipment bonuses
+            new_atk += selected_equip->attack_bonus;
+            new_def += selected_equip->defense_bonus;
+            new_int += selected_equip->intelligence_bonus;
+            new_agi += selected_equip->agility_bonus;
+
+            // Display current equipment
+            printf("Current %s:\n", slot_names[selected_slot]);
+            if (current_equip) {
+                printf("  %s", current_equip->name);
+                if (current_equip->attack_bonus > 0) printf(" (ATK+%d)", current_equip->attack_bonus);
+                if (current_equip->defense_bonus > 0) printf(" (DEF+%d)", current_equip->defense_bonus);
+                if (current_equip->intelligence_bonus > 0) printf(" (INT+%d)", current_equip->intelligence_bonus);
+                if (current_equip->agility_bonus > 0) printf(" (AGI+%d)", current_equip->agility_bonus);
+                printf("\n");
+            } else {
+                printf("  (None)\n");
+            }
+
+            // Display new equipment
+            printf("\nNew %s:\n", slot_names[selected_slot]);
+            printf("  %s", selected_equip->name);
+            if (selected_equip->attack_bonus > 0) printf(" (ATK+%d)", selected_equip->attack_bonus);
+            if (selected_equip->defense_bonus > 0) printf(" (DEF+%d)", selected_equip->defense_bonus);
+            if (selected_equip->intelligence_bonus > 0) printf(" (INT+%d)", selected_equip->intelligence_bonus);
+            if (selected_equip->agility_bonus > 0) printf(" (AGI+%d)", selected_equip->agility_bonus);
+            printf("\n\n");
+
+            // Display stat changes
+            printf("--- STAT CHANGES ---\n");
+
+            // Attack
+            printf("ATK: %d -> %d", current_atk, new_atk);
+            if (new_atk > current_atk) {
+                printf(" (+%d)", new_atk - current_atk);
+            } else if (new_atk < current_atk) {
+                printf(" (-%d)", current_atk - new_atk);
+            }
+            printf("\n");
+
+            // Defense
+            printf("DEF: %d -> %d", current_def, new_def);
+            if (new_def > current_def) {
+                printf(" (+%d)", new_def - current_def);
+            } else if (new_def < current_def) {
+                printf(" (-%d)", current_def - new_def);
+            }
+            printf("\n");
+
+            // Intelligence
+            printf("INT: %d -> %d", current_int, new_int);
+            if (new_int > current_int) {
+                printf(" (+%d)", new_int - current_int);
+            } else if (new_int < current_int) {
+                printf(" (-%d)", current_int - new_int);
+            }
+            printf("\n");
+
+            // Agility
+            printf("AGI: %d -> %d", current_agi, new_agi);
+            if (new_agi > current_agi) {
+                printf(" (+%d)", new_agi - current_agi);
+            } else if (new_agi < current_agi) {
+                printf(" (-%d)", current_agi - new_agi);
+            }
+            printf("\n\n");
+
+            // Confirmation
+            printf("Equip %s?\n", selected_equip->name);
+            printf("Press Z/Enter to confirm, or X/Esc to cancel\n");
+
+            InputButton confirm = INPUT_NONE;
+            while (confirm == INPUT_NONE) {
+                confirm = input_get_key();
+            }
+
+            if (confirm == INPUT_A || confirm == INPUT_START) {
+                // Equip the item
+                inventory_equip_item(g_game_state.inventory, inv_idx, member_choice);
+                input_wait_for_key();
+            }
+        }
+    }
 }
 
 void handle_tavern(void) {
@@ -370,10 +1179,30 @@ void handle_dungeon_selection(void) {
             // Inventory (skip separator)
             handle_inventory_menu();
         } else if (choice == dungeon_start_index + dungeon_menu_count + 2) {
-            // Party Status
-            clear_screen();
-            display_party_status();
-            input_wait_for_key();
+            // Party Status submenu
+            bool in_party_menu = true;
+            while (in_party_menu) {
+                const char* party_menu_options[] = {
+                    "View Party Status",
+                    "Manage Equipment",
+                    "Back"
+                };
+
+                int8_t party_choice = cursor_menu("PARTY MENU", party_menu_options, 3);
+
+                if (party_choice == 0) {
+                    // View party status
+                    clear_screen();
+                    display_party_status();
+                    input_wait_for_key();
+                } else if (party_choice == 1) {
+                    // Manage equipment
+                    handle_equipment_management();
+                } else {
+                    // Back or cancelled
+                    in_party_menu = false;
+                }
+            }
         } else if (choice == dungeon_start_index + dungeon_menu_count + 3) {
             // Save Game
             handle_save_menu();
@@ -455,9 +1284,10 @@ void handle_dungeon_exploration(void) {
                             input_wait_for_key();
                         } else {
                             printf("Exiting dungeon...\n");
+                            input_wait_for_key();
+                            input_flush_buffer(); // Clear any lingering input
                             in_dungeon = false;
                             game_state_change(STATE_DUNGEON_SELECT);
-                            input_wait_for_key();
                         }
                     } else if (current_tile == TILE_TREASURE) {
                         printf("\nFound treasure chest!\n");
@@ -500,6 +1330,7 @@ void handle_dungeon_exploration(void) {
                 char confirm;
                 scanf(" %c", &confirm);
                 if (confirm == 'Y' || confirm == 'y') {
+                    input_flush_buffer(); // Clear any lingering input from scanf
                     in_dungeon = false;
                     game_state_change(STATE_DUNGEON_SELECT);
                 }
@@ -526,12 +1357,13 @@ void handle_dungeon_exploration(void) {
 							while (in_camp) {
 								const char* camp_options[] = {
 									"View Party Status",
+									"Manage Equipment",
 									"Use Tent",
 									"Save Game",
 									"Return"
 								};
 
-								int8_t camp_choice = cursor_menu("CAMP", camp_options, 4);
+								int8_t camp_choice = cursor_menu("CAMP", camp_options, 5);
 
 								if (camp_choice == 0) {
 									// View party status
@@ -539,6 +1371,9 @@ void handle_dungeon_exploration(void) {
 									display_party_status();
 									input_wait_for_key();
 								} else if (camp_choice == 1) {
+									// Manage equipment
+									handle_equipment_management();
+								} else if (camp_choice == 2) {
 									// Use tent
 									int8_t tent_index = inventory_find_item(g_game_state.inventory, ITEM_TENT);
 									if (tent_index >= 0) {
@@ -550,11 +1385,11 @@ void handle_dungeon_exploration(void) {
 										printf("\nNo tents available!\n");
 										input_wait_for_key();
 									}
-								} else if (camp_choice == 2) {
+								} else if (camp_choice == 3) {
 									// Save game - still uses scanf for now
 									handle_save_menu();
 								} else {
-									// camp_choice == 3 (Return) or -1 (cancelled)
+									// camp_choice == 4 (Return) or -1 (cancelled)
 									in_camp = false;
 								}
 							}
