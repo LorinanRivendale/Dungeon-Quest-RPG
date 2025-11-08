@@ -3,6 +3,7 @@
 
 #include <stdint.h>
 #include <stdbool.h>
+#include <stddef.h>
 
 // Random number generation
 void random_seed(uint32_t seed);
@@ -12,6 +13,11 @@ bool random_chance(uint8_t percentage);
 // String utilities
 void safe_string_copy(char* dest, const char* src, uint8_t max_length);
 void clear_screen(void);
+
+// Safe input functions
+bool safe_scanf_int(int* value);
+bool safe_scanf_char(char* value);
+bool safe_scanf_string(char* buffer, size_t buffer_size);
 
 // Input handling (PC testing)
 typedef enum {

@@ -44,16 +44,73 @@ bool random_chance(uint8_t percentage) {
 
 void safe_string_copy(char* dest, const char* src, uint8_t max_length) {
     if (!dest || !src) return;
-    
+
     strncpy(dest, src, max_length - 1);
     dest[max_length - 1] = '\0';
 }
 
+bool safe_scanf_int(int* value) {
+    if (!value) return false;
+
+    if (scanf("%d", value) != 1) {
+        // Clear input buffer on error
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+        return false;
+    }
+
+    // Clear remaining input
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+
+    return true;
+}
+
+bool safe_scanf_char(char* value) {
+    if (!value) return false;
+
+    if (scanf(" %c", value) != 1) {
+        // Clear input buffer on error
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+        return false;
+    }
+
+    // Clear remaining input
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+
+    return true;
+}
+
+bool safe_scanf_string(char* buffer, size_t buffer_size) {
+    if (!buffer || buffer_size == 0) return false;
+
+    // Create format string with size limit
+    char format[32];
+    snprintf(format, sizeof(format), "%%%zus", buffer_size - 1);
+
+    if (scanf(format, buffer) != 1) {
+        // Clear input buffer on error
+        int c;
+        while ((c = getchar()) != '\n' && c != EOF);
+        return false;
+    }
+
+    // Clear remaining input
+    int c;
+    while ((c = getchar()) != '\n' && c != EOF);
+
+    return true;
+}
+
 void clear_screen(void) {
 #ifdef _WIN32
-    system("cls");
+    int result = system("cls");
+    (void)result; // Intentionally unused
 #else
-    system("clear");
+    int result = system("clear");
+    (void)result; // Intentionally unused
 #endif
 }
 

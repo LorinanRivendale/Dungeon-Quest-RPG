@@ -436,7 +436,7 @@ Item item_create_equipment(uint8_t equip_id) {
                 item.agility_bonus = 3;
                 break;
             default:
-                strcpy(item.name, "Unknown Accessory");
+                strcpy(item.name, "Unknown Ring");
                 break;
         }
     }

@@ -41,8 +41,10 @@ int main(void) {
     printf("2. Load Game\n");
     printf("\nSelect: ");
 
-    int title_choice;
-    scanf("%d", &title_choice);
+    int title_choice = 1;
+    if (!safe_scanf_int(&title_choice)) {
+        title_choice = 1; // Default to New Game on error
+    }
 
     bool game_loaded = false;
 
@@ -126,8 +128,8 @@ int main(void) {
 				printf("Your party has been defeated...\n\n");
 				printf("Return to title? (Y/N): ");
 				
-				char restart;
-				scanf(" %c", &restart);
+				char restart = 'N';
+				safe_scanf_char(&restart);
 				if (restart == 'Y' || restart == 'y') {
 					game_state_cleanup();
 					game_state_init();
@@ -189,15 +191,19 @@ void handle_party_selection(void) {
         
         printf("\nParty Member %d:\n", i + 1);
         printf("Job: ");
-        scanf("%d", &job_choice);
+        if (!safe_scanf_int(&job_choice)) {
+            job_choice = 1; // Default to Knight on error
+        }
         
         if (job_choice < 1 || job_choice > MAX_JOB_TYPES) {
             printf("Invalid job choice. Using Knight.\n");
             job_choice = 1;
         }
         
-        printf("Name: ");
-        scanf("%s", name);
+        printf("Name (max 11 chars): ");
+        if (!safe_scanf_string(name, MAX_NAME_LENGTH)) {
+            strcpy(name, "Hero"); // Default name on error
+        }
         
         party_add_member(g_game_state.party, (JobType)(job_choice - 1), name);
     }
@@ -1253,7 +1259,6 @@ void handle_dungeon_exploration(void) {
         }
         
         int8_t dx = 0, dy = 0;
-        bool moved = false;
         
         switch (input) {
             case INPUT_UP:
@@ -1327,8 +1332,8 @@ void handle_dungeon_exploration(void) {
                 
             case INPUT_B:
                 printf("\nReturn to dungeon selection? (Y/N): ");
-                char confirm;
-                scanf(" %c", &confirm);
+                char confirm = 'N';
+                safe_scanf_char(&confirm);
                 if (confirm == 'Y' || confirm == 'y') {
                     input_flush_buffer(); // Clear any lingering input from scanf
                     in_dungeon = false;
@@ -1419,8 +1424,6 @@ void handle_dungeon_exploration(void) {
         // Handle movement
         if (dx != 0 || dy != 0) {
             if (dungeon_move_player(current_dungeon, dx, dy)) {
-                moved = true;
-                
                 // Check for random encounter after moving
                 if (dungeon_check_encounter(current_dungeon)) {
                     printf("\nMonsters appear!\n");
@@ -2158,8 +2161,10 @@ void handle_inventory_menu(void) {
                 }
                 
                 printf("\nSelect item: ");
-                int item_choice;
-                scanf("%d", &item_choice);
+                int item_choice = 0;
+                if (!safe_scanf_int(&item_choice)) {
+                    continue; // Skip on error
+                }
                 
                 if (item_choice > 0 && item_choice <= g_game_state.inventory->item_count) {
                     printf("\nUse on which party member?\n");
@@ -2170,8 +2175,10 @@ void handle_inventory_menu(void) {
                                member->stats.current_mp, member->stats.max_mp);
                     }
                     
-                    int member_choice;
-                    scanf("%d", &member_choice);
+                    int member_choice = 0;
+                    if (!safe_scanf_int(&member_choice)) {
+                        continue; // Skip on error
+                    }
                     
                     if (member_choice > 0 && member_choice <= g_game_state.party->member_count) {
                         inventory_use_item(g_game_state.inventory, item_choice - 1, member_choice - 1);
@@ -2249,8 +2256,10 @@ void handle_save_menu(void) {
     printf("\n0. Cancel\n");
     printf("\nSelect save slot (0-2, or S for suspend save): ");
 
-    char choice_str[10];
-    scanf("%s", choice_str);
+    char choice_str[10] = "0";
+    if (!safe_scanf_string(choice_str, sizeof(choice_str))) {
+        return; // Cancel on error
+    }
 
     if (choice_str[0] == '0') {
         return;
@@ -2267,8 +2276,8 @@ void handle_save_menu(void) {
         if (slot >= 0 && slot < MAX_SAVE_SLOTS) {
             if (save_slot_exists(slot)) {
                 printf("\nOverwrite existing save? (Y/N): ");
-                char confirm;
-                scanf(" %c", &confirm);
+                char confirm = 'N';
+                safe_scanf_char(&confirm);
                 if (confirm != 'Y' && confirm != 'y') {
                     return;
                 }
@@ -2294,8 +2303,10 @@ void handle_load_menu(void) {
     printf("\n0. Cancel\n");
     printf("\nSelect save slot to load (0-2, or S for suspend save): ");
 
-    char choice_str[10];
-    scanf("%s", choice_str);
+    char choice_str[10] = "0";
+    if (!safe_scanf_string(choice_str, sizeof(choice_str))) {
+        return; // Cancel on error
+    }
 
     if (choice_str[0] == '0') {
         return;

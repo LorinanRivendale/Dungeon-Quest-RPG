@@ -140,7 +140,7 @@ void save_data_from_game_state(SaveData* save_data) {
         for (int i = 0; i < g_game_state.inventory->equipment_count; i++) {
             Item* equip = &g_game_state.inventory->equipment[i];
             save_data->inventory_data.equipment[i].equipment_id = equip->item_id;
-            save_data->inventory_data.equipment[i].slot = equip->equip_type;
+            save_data->inventory_data.equipment[i].slot = (EquipmentSlot)equip->equip_type;
             save_data->inventory_data.equipment[i].attack_bonus = equip->attack_bonus;
             save_data->inventory_data.equipment[i].defense_bonus = equip->defense_bonus;
             save_data->inventory_data.equipment[i].intelligence_bonus = equip->intelligence_bonus;
@@ -286,7 +286,7 @@ bool load_data_to_game_state(const SaveData* save_data) {
         for (int i = 0; i < save_data->inventory_data.equipment_count; i++) {
             Item* equip = &g_game_state.inventory->equipment[i];
             equip->item_id = save_data->inventory_data.equipment[i].equipment_id;
-            equip->equip_type = save_data->inventory_data.equipment[i].slot;
+            equip->equip_type = (EquipmentType)save_data->inventory_data.equipment[i].slot;
             equip->attack_bonus = save_data->inventory_data.equipment[i].attack_bonus;
             equip->defense_bonus = save_data->inventory_data.equipment[i].defense_bonus;
             equip->intelligence_bonus = save_data->inventory_data.equipment[i].intelligence_bonus;
