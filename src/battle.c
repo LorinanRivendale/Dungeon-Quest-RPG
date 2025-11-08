@@ -329,16 +329,18 @@ void battle_process_action(BattleAction* action) {
         case ACTION_ATTACK: {
             if (g_battle_state.is_boss_battle) {
                 printf("%s attacks %s!\n", actor->name, g_battle_state.boss->name);
-                uint16_t damage = battle_calculate_damage(character_get_total_attack(actor), 
-                                         g_battle_state.boss->defense, 
+                uint16_t damage = battle_calculate_damage(character_get_total_attack(actor),
+                                         g_battle_state.boss->defense,
                                          random_chance(actor->stats.luck));
-                
+
                 if (damage >= g_battle_state.boss->current_hp) {
                     g_battle_state.boss->current_hp = 0;
                     g_battle_state.battle_won = true;
-                    printf("*** %s defeated! ***\n", g_battle_state.boss->name);
+                    printf("%s takes %d damage and is defeated!\n", g_battle_state.boss->name, damage);
                 } else {
                     g_battle_state.boss->current_hp -= damage;
+                    printf("%s takes %d damage! (%d HP remaining)\n",
+                           g_battle_state.boss->name, damage, g_battle_state.boss->current_hp);
                 }
             } else {
                 // Validate target is alive, otherwise find next valid target
@@ -358,9 +360,11 @@ void battle_process_action(BattleAction* action) {
                     if (damage >= target->current_hp) {
                         target->current_hp = 0;
                         target->is_alive = false;
-                        printf("*** %s defeated! ***\n", target->name);
+                        printf("%s takes %d damage and is defeated!\n", target->name, damage);
                     } else {
                         target->current_hp -= damage;
+                        printf("%s takes %d damage! (%d HP remaining)\n",
+                               target->name, damage, target->current_hp);
                     }
                 }
             }
