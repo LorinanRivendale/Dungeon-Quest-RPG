@@ -198,12 +198,8 @@ bool dungeon_check_encounter(Dungeon* dungeon) {
     DungeonFloor* floor = &dungeon->floors[dungeon->current_floor];
     DungeonTile* tile = &floor->tiles[floor->player_y][floor->player_x];
 
-    // Boss room always triggers
-    if (tile->type == TILE_BOSS_ROOM && !dungeon->boss_defeated) {
-        return true;
-    }
-
     // Step-counter encounter system (Final Fantasy style)
+    // Boss rooms are safe zones - no random encounters until you interact
     if (tile->type == TILE_FLOOR || tile->type == TILE_ENTRANCE) {
         // Decrement encounter counter
         if (floor->encounter_steps > 0) {
