@@ -587,14 +587,21 @@ uint8_t character_get_total_intelligence(PartyMember* member) {
 
 uint8_t character_get_total_agility(PartyMember* member) {
     if (!member || !g_game_state.inventory) return member ? member->stats.agility : 0;
-    
+
     uint8_t total = member->stats.agility;
-    
+
     // Add accessory bonus
     uint8_t accessory_index = member->equipped_items[EQUIP_ACCESSORY];
     if (accessory_index != 0xFF && accessory_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[accessory_index].agility_bonus;
     }
-    
+
     return total;
+}
+
+uint8_t character_get_total_luck(PartyMember* member) {
+    if (!member) return 0;
+
+    // Luck currently has no equipment bonuses, just return base stat
+    return member->stats.luck;
 }	

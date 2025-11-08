@@ -98,6 +98,7 @@ extern uint8_t character_get_total_attack(PartyMember* member);
 extern uint8_t character_get_total_defense(PartyMember* member);
 extern uint8_t character_get_total_intelligence(PartyMember* member);
 extern uint8_t character_get_total_agility(PartyMember* member);
+extern uint8_t character_get_total_luck(PartyMember* member);
 
 // Helper function to give starting equipment
 extern void inventory_give_starting_equipment(Inventory* inv, Party* party);

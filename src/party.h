@@ -50,11 +50,20 @@ typedef enum {
     SKILL_TYPE_DEBUFF
 } SkillType;
 
+// Stat used for skill scaling
+typedef enum {
+    SCALE_STRENGTH = 0,
+    SCALE_INTELLIGENCE,
+    SCALE_AGILITY,
+    SCALE_LUCK
+} ScalingStat;
+
 // Skill/Spell structure
 typedef struct {
     uint8_t skill_id;
     char name[16];
     SkillType type;
+    ScalingStat scaling_stat; // Which stat to use for damage calculation
     uint8_t mp_cost;
     uint8_t power;           // Damage or healing amount (base)
     uint8_t target_enemy;    // 1 = targets enemy, 0 = targets ally

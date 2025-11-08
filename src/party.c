@@ -254,46 +254,47 @@ void character_gain_experience(PartyMember* member, uint32_t exp) {
 	}
 }
 // Skill database
+// Format: {skill_id, name, type, scaling_stat, mp_cost, power, target_enemy, target_all, description}
 static const Skill skill_database[] = {
-    // Knight skills
-    {SKILL_POWER_STRIKE, "Power Strike", SKILL_TYPE_ATTACK, 4, 30, 1, 0, "Strong physical attack"},
-    {SKILL_SHIELD_BASH, "Shield Bash", SKILL_TYPE_ATTACK, 3, 20, 1, 0, "Bash enemy with shield"},
-    {SKILL_TAUNT, "Taunt", SKILL_TYPE_DEBUFF, 2, 0, 1, 0, "Draw enemy attention"},
-    
-    // Black Belt skills
-    {SKILL_FOCUS_STRIKE, "Focus Strike", SKILL_TYPE_ATTACK, 5, 35, 1, 0, "Concentrated attack"},
-    {SKILL_COUNTER_STANCE, "Counter", SKILL_TYPE_BUFF, 4, 0, 0, 0, "Counter next attack"},
-    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_HEAL, 0, 20, 0, 0, "Restore HP"},
-    
-    // Thief skills
-    {SKILL_STEAL, "Steal", SKILL_TYPE_ATTACK, 3, 0, 1, 0, "Steal item from enemy"},
-    {SKILL_BACKSTAB, "Backstab", SKILL_TYPE_ATTACK, 6, 40, 1, 0, "Critical strike"},
-    {SKILL_SMOKE_BOMB, "Smoke Bomb", SKILL_TYPE_DEBUFF, 5, 0, 1, 1, "Flee from battle"},
-    
-    // Sage spells (balanced offense and healing)
-    {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, 4, 25, 1, 0, "Fire magic attack"},
-    {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, 8, 45, 1, 0, "Strong fire attack"},
-    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, 16, 80, 1, 1, "Massive fire on all"},
-    {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, 5, 40, 0, 0, "Restore HP"},
-    {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, 10, 80, 0, 0, "Restore more HP"},
-    
-    // Priest spells (focus on healing and support)
-    {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, 4, 50, 0, 0, "Restore HP"},
-    {SKILL_HEALA, "Heala", SKILL_TYPE_HEAL, 8, 100, 0, 0, "Restore lots of HP"},
-    {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, 12, 150, 0, 1, "Heal entire party"},
-    {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, 6, 0, 0, 0, "Increase defense"},
-    {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, 5, 0, 0, 0, "Cure status effects"},
-    
-    // Mage spells (focus on damage)
-    {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, 5, 30, 1, 0, "Lightning attack"},
-    {SKILL_BOLT2, "Bolt2", SKILL_TYPE_ATTACK, 10, 55, 1, 0, "Strong lightning"},
-    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, 18, 95, 1, 1, "Massive lightning"},
-    {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, 5, 30, 1, 0, "Ice attack"},
-    {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, 10, 55, 1, 0, "Strong ice attack"},
-    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, 18, 95, 1, 1, "Massive ice attack"},
-    
+    // Knight skills (scale on STRENGTH)
+    {SKILL_POWER_STRIKE, "Power Strike", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 4, 30, 1, 0, "Strong physical attack"},
+    {SKILL_SHIELD_BASH, "Shield Bash", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 3, 20, 1, 0, "Bash enemy with shield"},
+    {SKILL_TAUNT, "Taunt", SKILL_TYPE_DEBUFF, SCALE_STRENGTH, 2, 0, 1, 0, "Draw enemy attention"},
+
+    // Black Belt skills (scale on AGILITY)
+    {SKILL_FOCUS_STRIKE, "Focus Strike", SKILL_TYPE_ATTACK, SCALE_AGILITY, 5, 35, 1, 0, "Concentrated attack"},
+    {SKILL_COUNTER_STANCE, "Counter", SKILL_TYPE_BUFF, SCALE_AGILITY, 4, 0, 0, 0, "Counter next attack"},
+    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_HEAL, SCALE_AGILITY, 0, 20, 0, 0, "Restore HP"},
+
+    // Thief skills (scale on LUCK)
+    {SKILL_STEAL, "Steal", SKILL_TYPE_ATTACK, SCALE_LUCK, 3, 0, 1, 0, "Steal item from enemy"},
+    {SKILL_BACKSTAB, "Backstab", SKILL_TYPE_ATTACK, SCALE_LUCK, 6, 40, 1, 0, "Critical strike"},
+    {SKILL_SMOKE_BOMB, "Smoke Bomb", SKILL_TYPE_DEBUFF, SCALE_LUCK, 5, 0, 1, 1, "Flee from battle"},
+
+    // Sage spells (scale on INTELLIGENCE)
+    {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 4, 25, 1, 0, "Fire magic attack"},
+    {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, "Strong fire attack"},
+    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 80, 1, 1, "Massive fire on all"},
+    {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, "Restore HP"},
+    {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, "Restore more HP"},
+
+    // Priest spells (scale on INTELLIGENCE)
+    {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 4, 50, 0, 0, "Restore HP"},
+    {SKILL_HEALA, "Heala", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 8, 100, 0, 0, "Restore lots of HP"},
+    {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, "Heal entire party"},
+    {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 6, 0, 0, 0, "Increase defense"},
+    {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 0, 0, 0, "Cure status effects"},
+
+    // Mage spells (scale on INTELLIGENCE)
+    {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Lightning attack"},
+    {SKILL_BOLT2, "Bolt2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong lightning"},
+    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 95, 1, 1, "Massive lightning"},
+    {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Ice attack"},
+    {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong ice attack"},
+    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 95, 1, 1, "Massive ice attack"},
+
     // Terminator
-    {SKILL_NONE, "", SKILL_TYPE_ATTACK, 0, 0, 0, 0, ""}
+    {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, ""}
 };
 
 const Skill* get_skill_data(uint8_t skill_id) {

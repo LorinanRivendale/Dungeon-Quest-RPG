@@ -179,13 +179,56 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
     // Process skill effect
     switch (skill->type) {
         case SKILL_TYPE_ATTACK: {
-            // Calculate magic damage based on intelligence
-            uint8_t magic_attack = character_get_total_intelligence(actor);
-            uint16_t damage = (skill->power * magic_attack) / 10;
-            
-            // Add variance
+            // Get the appropriate scaling stat
+            uint8_t scaling_value = 0;
+            bool is_physical = false;
+
+            switch (skill->scaling_stat) {
+                case SCALE_STRENGTH:
+                    scaling_value = character_get_total_attack(actor);
+                    is_physical = true;
+                    break;
+                case SCALE_AGILITY:
+                    scaling_value = character_get_total_agility(actor);
+                    is_physical = true;
+                    break;
+                case SCALE_LUCK:
+                    scaling_value = character_get_total_luck(actor);
+                    is_physical = true;
+                    break;
+                case SCALE_INTELLIGENCE:
+                    scaling_value = character_get_total_intelligence(actor);
+                    is_physical = false;
+                    break;
+            }
+
+            uint16_t damage = 0;
+            uint8_t enemy_def = 0;
+
+            // Get enemy defense for physical skills
+            if (is_physical) {
+                if (g_battle_state.is_boss_battle) {
+                    enemy_def = g_battle_state.boss->defense;
+                } else {
+                    if (target_index < g_battle_state.enemy_count) {
+                        enemy_def = g_battle_state.enemies[target_index].defense;
+                    }
+                }
+
+                // Physical skill formula: (scaling_stat * 2) + power - defense
+                int raw_damage = (scaling_value * 2) + skill->power - enemy_def;
+                if (raw_damage < 1) raw_damage = 1;
+                damage = (uint16_t)raw_damage;
+            } else {
+                // Magic skill formula: (scaling_stat * power) / 10 (ignores defense)
+                damage = (scaling_value * skill->power) / 10;
+                if (damage < 1) damage = 1;
+            }
+
+            // Add variance (±15%)
             int variance = random_range(85, 115);
             damage = (damage * variance) / 100;
+            if (damage < 1) damage = 1;
             
             if (skill->target_all) {
                 // Hit all enemies
