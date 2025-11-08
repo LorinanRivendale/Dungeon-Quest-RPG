@@ -274,7 +274,7 @@ static const Skill skill_database[] = {
     // Sage spells (scale on INTELLIGENCE)
     {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 4, 25, 1, 0, "Fire magic attack"},
     {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, "Strong fire attack"},
-    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 80, 1, 1, "Massive fire on all"},
+    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, "Massive fire on all"},
     {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, "Restore HP"},
     {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, "Restore more HP"},
 
@@ -288,10 +288,10 @@ static const Skill skill_database[] = {
     // Mage spells (scale on INTELLIGENCE)
     {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Lightning attack"},
     {SKILL_BOLT2, "Bolt2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong lightning"},
-    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 95, 1, 1, "Massive lightning"},
+    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, "Massive lightning"},
     {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Ice attack"},
     {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong ice attack"},
-    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 95, 1, 1, "Massive ice attack"},
+    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, "Massive ice attack"},
 
     // Terminator
     {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, ""}

@@ -134,11 +134,22 @@ void dungeon_init_boss(Dungeon* dungeon, uint8_t dungeon_id) {
     };
     
     safe_string_copy(dungeon->boss.name, boss_names[dungeon_id], MAX_NAME_LENGTH);
-    dungeon->boss.max_hp = 200 + (dungeon_id * 100);
+
+    // Final boss (Dark Lord) is rebalanced to match expected player level (~20)
+    if (dungeon_id == 4) {
+        dungeon->boss.max_hp = 450;      // Was 600 (reduced ~25%)
+        dungeon->boss.attack = 26;       // Was 35 (reduced ~26%)
+        dungeon->boss.defense = 18;      // Was 22 (reduced ~18%)
+        dungeon->boss.level = 20;        // Was 30 (matches expected player level)
+    } else {
+        // Regular bosses use formula
+        dungeon->boss.max_hp = 200 + (dungeon_id * 100);
+        dungeon->boss.attack = 15 + (dungeon_id * 5);
+        dungeon->boss.defense = 10 + (dungeon_id * 3);
+        dungeon->boss.level = 10 + (dungeon_id * 5);
+    }
+
     dungeon->boss.current_hp = dungeon->boss.max_hp;
-    dungeon->boss.attack = 15 + (dungeon_id * 5);
-    dungeon->boss.defense = 10 + (dungeon_id * 3);
-    dungeon->boss.level = 10 + (dungeon_id * 5);
     dungeon->boss.key_item_reward = key_items[dungeon_id];
 }
 

@@ -28,7 +28,7 @@ void game_state_init(void) {
     g_game_state.current_dungeon_index = 0;
     g_game_state.final_dungeon_unlocked = false;
     g_game_state.game_time = 0;
-    g_game_state.gold = 100; // Starting gold
+    g_game_state.gold = 200; // Starting gold (increased from 100 for better early economy)
     
     // Initialize all dungeons as not initialized
     for (int i = 0; i <= MAX_DUNGEONS; i++) {

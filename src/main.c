@@ -296,12 +296,12 @@ typedef struct {
 
 // Shop inventory (static data)
 static const ShopItem shop_items[] = {
-    {ITEM_POTION, "Potion", 50, 25, "Restores 50 HP"},
+    {ITEM_POTION, "Potion", 30, 15, "Restores 50 HP"},
     {ITEM_HI_POTION, "Hi-Potion", 150, 75, "Restores 150 HP"},
     {ITEM_ETHER, "Ether", 100, 50, "Restores 30 MP"},
     {ITEM_ELIXIR, "Elixir", 1000, 500, "Fully restores HP/MP"},
     {ITEM_ANTIDOTE, "Antidote", 30, 15, "Cures poison"},
-    {ITEM_TENT, "Tent", 200, 100, "Fully heals party"}
+    {ITEM_TENT, "Tent", 150, 75, "Fully heals party"}
 };
 #define SHOP_ITEM_COUNT 6
 

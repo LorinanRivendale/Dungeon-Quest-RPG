@@ -473,7 +473,7 @@ void battle_distribute_rewards(void) {
 
     if (g_battle_state.is_boss_battle) {
         total_exp = g_battle_state.boss->level * 100;
-        total_gold = g_battle_state.boss->level * 50;
+        total_gold = g_battle_state.boss->level * 100; // Increased from *50 for better economy
     } else {
         for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
             total_exp += g_battle_state.enemies[i].exp_reward;
