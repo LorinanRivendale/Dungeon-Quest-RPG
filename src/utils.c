@@ -351,6 +351,145 @@ int8_t cursor_menu(const char* title, const char** options, uint8_t option_count
     }
 }
 
+bool virtual_keyboard(const char* prompt, char* buffer, uint8_t max_length) {
+    if (!buffer || max_length < 2) return false;
+
+    // Keyboard layout: 4 rows
+    // Row 0: A-J
+    // Row 1: K-T
+    // Row 2: U-Z and punctuation
+    // Row 3: SPACE, BACK, OK
+    const char keyboard[4][10] = {
+        {'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J'},
+        {'K', 'L', 'M', 'N', 'O', 'P', 'Q', 'R', 'S', 'T'},
+        {'U', 'V', 'W', 'X', 'Y', 'Z', '.', '-', '\'', ' '},
+        {' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' ', ' '} // Special row for SPACE, BACK, OK
+    };
+
+    const uint8_t row_lengths[4] = {10, 10, 10, 3};
+
+    char current_text[32] = "";
+    uint8_t text_length = 0;
+    uint8_t cursor_row = 0;
+    uint8_t cursor_col = 0;
+
+    while (1) {
+        clear_screen();
+        printf("\n=== %s ===\n\n", prompt);
+
+        // Display current text
+        printf("Name: %s", current_text);
+        for (uint8_t i = text_length; i < max_length - 1; i++) {
+            printf("_");
+        }
+        printf("\n\n");
+
+        // Display keyboard grid
+        for (uint8_t row = 0; row < 3; row++) {
+            printf("  ");
+            for (uint8_t col = 0; col < row_lengths[row]; col++) {
+                if (row == cursor_row && col == cursor_col) {
+                    printf("[%c]", keyboard[row][col]);
+                } else {
+                    printf(" %c ", keyboard[row][col]);
+                }
+                printf(" ");
+            }
+            printf("\n");
+        }
+
+        // Display special buttons
+        printf("\n  ");
+        const char* special_buttons[3] = {"SPACE", "BACK", "OK"};
+        for (uint8_t i = 0; i < 3; i++) {
+            if (cursor_row == 3 && cursor_col == i) {
+                printf("[%s]", special_buttons[i]);
+            } else {
+                printf(" %s ", special_buttons[i]);
+            }
+            printf("  ");
+        }
+        printf("\n");
+
+        printf("\nControls: W/A/S/D=Move, Enter/Z=Select, X/Esc=Cancel\n");
+
+        // Get input
+        InputButton input = INPUT_NONE;
+        while (input == INPUT_NONE) {
+            input = input_get_key();
+        }
+
+        switch (input) {
+            case INPUT_UP:
+                if (cursor_row > 0) {
+                    cursor_row--;
+                    // Adjust column if out of bounds for new row
+                    if (cursor_col >= row_lengths[cursor_row]) {
+                        cursor_col = row_lengths[cursor_row] - 1;
+                    }
+                }
+                break;
+
+            case INPUT_DOWN:
+                if (cursor_row < 3) {
+                    cursor_row++;
+                    // Adjust column if out of bounds for new row
+                    if (cursor_col >= row_lengths[cursor_row]) {
+                        cursor_col = row_lengths[cursor_row] - 1;
+                    }
+                }
+                break;
+
+            case INPUT_LEFT:
+                if (cursor_col > 0) {
+                    cursor_col--;
+                }
+                break;
+
+            case INPUT_RIGHT:
+                if (cursor_col < row_lengths[cursor_row] - 1) {
+                    cursor_col++;
+                }
+                break;
+
+            case INPUT_A: // Z or Space
+            case INPUT_START: // Enter
+                if (cursor_row == 3) {
+                    // Special buttons
+                    if (cursor_col == 0) {
+                        // SPACE
+                        if (text_length < max_length - 1) {
+                            current_text[text_length++] = ' ';
+                            current_text[text_length] = '\0';
+                        }
+                    } else if (cursor_col == 1) {
+                        // BACK
+                        if (text_length > 0) {
+                            current_text[--text_length] = '\0';
+                        }
+                    } else if (cursor_col == 2) {
+                        // OK - confirm and return
+                        safe_string_copy(buffer, current_text, max_length);
+                        return true;
+                    }
+                } else {
+                    // Regular letter
+                    if (text_length < max_length - 1) {
+                        current_text[text_length++] = keyboard[cursor_row][cursor_col];
+                        current_text[text_length] = '\0';
+                    }
+                }
+                break;
+
+            case INPUT_B: // X or Escape
+                return false; // Cancelled
+
+            default:
+                break;
+        }
+    }
+}
+
 void display_dungeon(void) {
     if (!g_game_state.dungeon_initialized[g_game_state.current_dungeon_index]) return;
 

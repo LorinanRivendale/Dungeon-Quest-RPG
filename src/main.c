@@ -36,19 +36,17 @@ int main(void) {
     
     printf("Welcome to Dungeon Quest RPG!\n");
     printf("A test scenario for our GameBoy RPG\n\n");
+    input_wait_for_key();
 
-    printf("1. New Game\n");
-    printf("2. Load Game\n");
-    printf("\nSelect: ");
+    const char* title_options[] = {"New Game", "Load Game"};
+    int8_t title_choice = cursor_menu("TITLE SCREEN", title_options, 2);
 
-    int title_choice = 1;
-    if (!safe_scanf_int(&title_choice)) {
-        title_choice = 1; // Default to New Game on error
-    }
+    // If cancelled, default to New Game
+    if (title_choice < 0) title_choice = 0;
 
     bool game_loaded = false;
 
-    if (title_choice == 2) {
+    if (title_choice == 1) {
         // Load game
         handle_load_menu();
 
@@ -126,11 +124,12 @@ int main(void) {
 				printf("     GAME OVER\n");
 				printf("======================\n");
 				printf("Your party has been defeated...\n\n");
-				printf("Return to title? (Y/N): ");
-				
-				char restart = 'N';
-				safe_scanf_char(&restart);
-				if (restart == 'Y' || restart == 'y') {
+				input_wait_for_key();
+
+				const char* restart_options[] = {"Return to Title", "Quit Game"};
+				int8_t restart = cursor_menu("GAME OVER", restart_options, 2);
+
+				if (restart == 0) {
 					game_state_cleanup();
 					game_state_init();
 					game_state_change(STATE_PARTY_SELECT);
@@ -181,31 +180,28 @@ void handle_party_selection(void) {
         printf("%d. %s\n", i + 1, job_names[i]);
     }
     
-    printf("\nEnter job number for each party member (1-%d):\n", MAX_JOB_TYPES);
-    
     g_game_state.party = party_create();
-    
+
     for (int i = 0; i < MAX_PARTY_SIZE; i++) {
-        int job_choice;
+        char prompt[64];
+        snprintf(prompt, sizeof(prompt), "SELECT JOB FOR MEMBER %d", i + 1);
+
+        // Job selection using cursor menu
+        int8_t job_choice = cursor_menu(prompt, job_names, MAX_JOB_TYPES);
+
+        // If cancelled, default to Knight
+        if (job_choice < 0) job_choice = 0;
+
+        // Name entry using virtual keyboard
         char name[MAX_NAME_LENGTH];
-        
-        printf("\nParty Member %d:\n", i + 1);
-        printf("Job: ");
-        if (!safe_scanf_int(&job_choice)) {
-            job_choice = 1; // Default to Knight on error
+        snprintf(prompt, sizeof(prompt), "NAME FOR MEMBER %d", i + 1);
+
+        if (!virtual_keyboard(prompt, name, MAX_NAME_LENGTH)) {
+            // If cancelled, use default name
+            snprintf(name, MAX_NAME_LENGTH, "%s%d", job_names[job_choice], i + 1);
         }
-        
-        if (job_choice < 1 || job_choice > MAX_JOB_TYPES) {
-            printf("Invalid job choice. Using Knight.\n");
-            job_choice = 1;
-        }
-        
-        printf("Name (max 11 chars): ");
-        if (!safe_scanf_string(name, MAX_NAME_LENGTH)) {
-            strcpy(name, "Hero"); // Default name on error
-        }
-        
-        party_add_member(g_game_state.party, (JobType)(job_choice - 1), name);
+
+        party_add_member(g_game_state.party, (JobType)job_choice, name);
     }
     
     printf("\n");
@@ -1331,10 +1327,10 @@ void handle_dungeon_exploration(void) {
                 break;
                 
             case INPUT_B:
-                printf("\nReturn to dungeon selection? (Y/N): ");
-                char confirm = 'N';
-                safe_scanf_char(&confirm);
-                if (confirm == 'Y' || confirm == 'y') {
+                const char* exit_options[] = {"Return to Dungeon Selection", "Cancel"};
+                int8_t confirm = cursor_menu("EXIT DUNGEON", exit_options, 2);
+
+                if (confirm == 0) {
                     input_flush_buffer(); // Clear any lingering input from scanf
                     in_dungeon = false;
                     game_state_change(STATE_DUNGEON_SELECT);
@@ -2139,62 +2135,72 @@ void handle_inventory_menu(void) {
         if (g_game_state.key_items_collected & KEY_ITEM_WIND_CRYSTAL)
             printf("  Wind Crystal\n");
         
-        printf("\n1. Use Item\n");
-        printf("2. View Party Status\n");
-        printf("3. View Equipment Details\n");
-        printf("4. Return\n");
-        printf("\nSelect: ");
+        const char* inv_options[] = {"Use Item", "View Party Status", "View Equipment Details", "Return"};
+        int8_t choice = cursor_menu("INVENTORY", inv_options, 4);
 
-        int choice;
-        if (scanf("%d", &choice) != 1) {
-            // Clear invalid input
-            input_flush_buffer();
+        if (choice < 0 || choice == 3) {
+            in_inventory = false;
             continue;
         }
 
         switch (choice) {
-            case 1:
+            case 0:
                 if (g_game_state.inventory->item_count == 0) {
                     printf("No items to use!\n");
                     input_wait_for_key();
                     break;
                 }
                 
-                printf("\nSelect item: ");
-                int item_choice = 0;
-                if (!safe_scanf_int(&item_choice)) {
-                    continue; // Skip on error
+                // Build item list
+                char* item_options[MAX_INVENTORY_ITEMS + 1];
+                for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
+                    Item* item = &g_game_state.inventory->items[i];
+                    item_options[i] = malloc(64);
+                    snprintf(item_options[i], 64, "%s x%d", item->name, item->quantity);
                 }
-                
-                if (item_choice > 0 && item_choice <= g_game_state.inventory->item_count) {
-                    printf("\nUse on which party member?\n");
+                item_options[g_game_state.inventory->item_count] = "Cancel";
+
+                int8_t item_choice = cursor_menu("SELECT ITEM", (const char**)item_options, g_game_state.inventory->item_count + 1);
+
+                // Free allocated strings
+                for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
+                    free(item_options[i]);
+                }
+
+                if (item_choice >= 0 && item_choice < g_game_state.inventory->item_count) {
+                    // Build member list
+                    char* member_options[MAX_PARTY_SIZE + 1];
                     for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
                         PartyMember* member = &g_game_state.party->members[i];
-                        printf("%d. %s (HP: %d/%d, MP: %d/%d)\n", i + 1, member->name,
-                               member->stats.current_hp, member->stats.max_hp,
-                               member->stats.current_mp, member->stats.max_mp);
+                        member_options[i] = malloc(64);
+                        snprintf(member_options[i], 64, "%s (HP:%d/%d MP:%d/%d)",
+                                member->name, member->stats.current_hp, member->stats.max_hp,
+                                member->stats.current_mp, member->stats.max_mp);
                     }
-                    
-                    int member_choice = 0;
-                    if (!safe_scanf_int(&member_choice)) {
-                        continue; // Skip on error
+                    member_options[g_game_state.party->member_count] = "Cancel";
+
+                    int8_t member_choice = cursor_menu("USE ON", (const char**)member_options, g_game_state.party->member_count + 1);
+
+                    // Free allocated strings
+                    for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+                        free(member_options[i]);
                     }
-                    
-                    if (member_choice > 0 && member_choice <= g_game_state.party->member_count) {
-                        inventory_use_item(g_game_state.inventory, item_choice - 1, member_choice - 1);
+
+                    if (member_choice >= 0 && member_choice < g_game_state.party->member_count) {
+                        inventory_use_item(g_game_state.inventory, item_choice, member_choice);
                     }
                 }
                 
                 input_wait_for_key();
                 break;
                 
-            case 2:
+            case 1:
                 display_party_status();
                 input_wait_for_key();
                 input_flush_buffer();
                 break;
 
-            case 3:
+            case 2:
                 // Equipment details
                 clear_screen();
                 printf("\n=== EQUIPMENT DETAILS ===\n\n");
@@ -2250,99 +2256,95 @@ void handle_inventory_menu(void) {
 }
 
 void handle_save_menu(void) {
-    clear_screen();
-    printf("\n=== SAVE GAME ===\n");
-    display_save_slots();
-    printf("\n0. Cancel\n");
-    printf("\nSelect save slot (0-2, or S for suspend save): ");
+    const char* save_options[] = {"Slot 1", "Slot 2", "Suspend Save", "Cancel"};
 
-    char choice_str[10] = "0";
-    if (!safe_scanf_string(choice_str, sizeof(choice_str))) {
-        return; // Cancel on error
+    int8_t choice = cursor_menu("SAVE GAME", save_options, 4);
+
+    if (choice < 0 || choice == 3) {
+        return; // Cancelled or selected Cancel
     }
 
-    if (choice_str[0] == '0') {
-        return;
-    } else if (choice_str[0] == 'S' || choice_str[0] == 's') {
+    if (choice == 2) {
         // Suspend save
         if (save_suspend_game()) {
-            printf("\nSuspend save created! (Will be deleted when loaded)\n");
+            clear_screen();
+            printf("\n Suspend save created! (Will be deleted when loaded)\n");
         } else {
+            clear_screen();
             printf("\nFailed to create suspend save!\n");
         }
         input_wait_for_key();
     } else {
-        int slot = atoi(choice_str) - 1;
-        if (slot >= 0 && slot < MAX_SAVE_SLOTS) {
-            if (save_slot_exists(slot)) {
-                printf("\nOverwrite existing save? (Y/N): ");
-                char confirm = 'N';
-                safe_scanf_char(&confirm);
-                if (confirm != 'Y' && confirm != 'y') {
-                    return;
-                }
-            }
+        // Slot 1 or Slot 2
+        int slot = choice; // 0 or 1
 
-            if (save_game_to_slot(slot)) {
-                printf("\nGame saved successfully!\n");
-            } else {
-                printf("\nFailed to save game!\n");
+        if (save_slot_exists(slot)) {
+            const char* confirm_options[] = {"Yes", "No"};
+            clear_screen();
+            printf("\nOverwrite existing save in Slot %d?\n", slot + 1);
+            int8_t confirm = cursor_menu("CONFIRM OVERWRITE", confirm_options, 2);
+
+            if (confirm != 0) {
+                return; // Not confirmed
             }
-            input_wait_for_key();
-        } else {
-            printf("\nInvalid slot!\n");
-            input_wait_for_key();
         }
+
+        if (save_game_to_slot(slot)) {
+            clear_screen();
+            printf("\nGame saved to Slot %d successfully!\n", slot + 1);
+        } else {
+            clear_screen();
+            printf("\nFailed to save game!\n");
+        }
+        input_wait_for_key();
     }
 }
 
 void handle_load_menu(void) {
-    clear_screen();
-    printf("\n=== LOAD GAME ===\n");
-    display_save_slots();
-    printf("\n0. Cancel\n");
-    printf("\nSelect save slot to load (0-2, or S for suspend save): ");
+    const char* load_options[] = {"Slot 1", "Slot 2", "Suspend Save", "Cancel"};
 
-    char choice_str[10] = "0";
-    if (!safe_scanf_string(choice_str, sizeof(choice_str))) {
-        return; // Cancel on error
+    int8_t choice = cursor_menu("LOAD GAME", load_options, 4);
+
+    if (choice < 0 || choice == 3) {
+        return; // Cancelled or selected Cancel
     }
 
-    if (choice_str[0] == '0') {
-        return;
-    } else if (choice_str[0] == 'S' || choice_str[0] == 's') {
+    if (choice == 2) {
         // Load suspend save
         if (suspend_save_exists()) {
             if (load_suspend_game()) {
+                clear_screen();
                 printf("\nSuspend save loaded! (Save file deleted)\n");
                 input_wait_for_key();
                 // Game state is now loaded, will continue from loaded state
             } else {
+                clear_screen();
                 printf("\nFailed to load suspend save!\n");
                 input_wait_for_key();
             }
         } else {
+            clear_screen();
             printf("\nNo suspend save found!\n");
             input_wait_for_key();
         }
     } else {
-        int slot = atoi(choice_str) - 1;
-        if (slot >= 0 && slot < MAX_SAVE_SLOTS) {
-            if (save_slot_exists(slot)) {
-                if (load_game_from_slot(slot)) {
-                    printf("\nGame loaded successfully!\n");
-                    input_wait_for_key();
-                    // Game state is now loaded, will continue from loaded state
-                } else {
-                    printf("\nFailed to load game!\n");
-                    input_wait_for_key();
-                }
+        // Slot 1 or Slot 2
+        int slot = choice; // 0 or 1
+
+        if (save_slot_exists(slot)) {
+            if (load_game_from_slot(slot)) {
+                clear_screen();
+                printf("\nGame loaded from Slot %d successfully!\n", slot + 1);
+                input_wait_for_key();
+                // Game state is now loaded, will continue from loaded state
             } else {
-                printf("\nNo save data in this slot!\n");
+                clear_screen();
+                printf("\nFailed to load game!\n");
                 input_wait_for_key();
             }
         } else {
-            printf("\nInvalid slot!\n");
+            clear_screen();
+            printf("\nNo save data in Slot %d!\n", slot + 1);
             input_wait_for_key();
         }
     }

@@ -47,4 +47,9 @@ void display_dungeon(void);
 // Cursor-based menu (returns selected index, or -1 if cancelled)
 int8_t cursor_menu(const char* title, const char** options, uint8_t option_count);
 
+// Virtual keyboard for text input (GameBoy-ready)
+// Writes the entered text to 'buffer' (max 'max_length' chars including null terminator)
+// Returns true if user confirmed, false if cancelled
+bool virtual_keyboard(const char* prompt, char* buffer, uint8_t max_length);
+
 #endif // UTILS_H
