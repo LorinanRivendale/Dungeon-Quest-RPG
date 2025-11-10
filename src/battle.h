@@ -32,6 +32,8 @@ typedef struct {
     uint16_t exp_reward;
     uint16_t gold_reward;
     bool is_alive;
+    ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
+    uint8_t buff_count;
 } Enemy;
 
 // Battle action types

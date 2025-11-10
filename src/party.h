@@ -78,6 +78,7 @@ typedef struct {
 #define SKILL_POWER_STRIKE 1
 #define SKILL_SHIELD_BASH 2
 #define SKILL_TAUNT 3
+#define SKILL_GUARD 4
 
 // Black Belt skills
 #define SKILL_FOCUS_STRIKE 10
@@ -95,6 +96,7 @@ typedef struct {
 #define SKILL_FIRAGA 32
 #define SKILL_CURE 33
 #define SKILL_CURA 34
+#define SKILL_TRANQUILITY 35
 
 // Priest spells
 #define SKILL_HEAL 40
@@ -102,6 +104,7 @@ typedef struct {
 #define SKILL_HEALAGA 42
 #define SKILL_PROTECT 43
 #define SKILL_ESUNA 44
+#define SKILL_PRAYER 45
 
 // Mage spells
 #define SKILL_BOLT 50
@@ -110,6 +113,7 @@ typedef struct {
 #define SKILL_ICE 53
 #define SKILL_ICE2 54
 #define SKILL_ICE3 55
+#define SKILL_FOCUS 56
 
 // Party member structure
 typedef struct PartyMember {
@@ -120,6 +124,8 @@ typedef struct PartyMember {
     uint8_t status_effects; // Bitfield
     uint8_t skills[MAX_SKILLS]; // Skill/spell IDs (for later implementation)
     uint8_t skill_count;
+    ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
+    uint8_t buff_count;
 } PartyMember;
 
 // Party structure
@@ -159,5 +165,13 @@ const Skill* get_skill_data(uint8_t skill_id);
 void character_learn_skill(PartyMember* member, uint8_t skill_id);
 bool character_can_use_skill(PartyMember* member, uint8_t skill_id);
 void character_init_starting_skills(PartyMember* member);
+
+// Buff/Debuff management
+void character_add_buff(PartyMember* member, BuffType type, int8_t magnitude, uint8_t duration);
+void character_remove_buff(PartyMember* member, BuffType type);
+void character_clear_all_buffs(PartyMember* member);
+void character_update_buffs(PartyMember* member);
+bool character_has_buff(PartyMember* member, BuffType type);
+int16_t character_get_buff_modifier(PartyMember* member, BuffType stat_type);
 
 #endif // PARTY_H

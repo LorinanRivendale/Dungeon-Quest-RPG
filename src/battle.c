@@ -75,7 +75,8 @@ void battle_generate_enemies(uint8_t dungeon_level, uint8_t count) {
         enemy->exp_reward = 10 + (enemy->level * 5);
         enemy->gold_reward = 5 + (enemy->level * 3);
         enemy->is_alive = true;
-        
+        enemy->buff_count = 0;
+
         printf("Enemy %d: %s (Lv%d)\n", i+1, enemy->name, enemy->level);
     }
 }
@@ -117,8 +118,9 @@ void battle_execute_turn(void) {
         uint8_t enemy_index = actor - MAX_PARTY_SIZE;
         if (g_battle_state.is_boss_battle && g_battle_state.boss) {
             // Boss AI
+            // Note: Boss buff updates would go here if implemented
             printf("\n%s attacks!\n", g_battle_state.boss->name);
-            
+
             // Choose random party member to attack
             uint8_t target;
             do {
@@ -285,7 +287,7 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
         
         case SKILL_TYPE_HEAL: {
             uint16_t heal_amount = skill->power;
-            
+
             if (skill->target_all) {
                 // Heal entire party
                 printf("Heals entire party!\n");
@@ -293,6 +295,17 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
                     PartyMember* member = &g_game_state.party->members[i];
                     if (member->stats.current_hp > 0) {
                         character_heal(member, heal_amount);
+                    }
+                }
+
+                // Prayer also grants MP regen to all party members
+                if (skill->skill_id == SKILL_PRAYER) {
+                    printf("%s grants MP regeneration to the party!\n", actor->name);
+                    for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
+                        PartyMember* member = &g_game_state.party->members[i];
+                        if (member->stats.current_hp > 0) {
+                            character_add_buff(member, BUFF_REGEN_MP, 5, 2); // +5 MP per turn for 2 turns
+                        }
                     }
                 }
             } else {
@@ -303,28 +316,57 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
             break;
         }
         
-        case SKILL_TYPE_BUFF:
-            printf("%s is protected!\n", actor->name);
-            // TODO: Implement buff system
+        case SKILL_TYPE_BUFF: {
+            // Apply buff based on skill ID
+            if (skill->skill_id == SKILL_PROTECT) {
+                character_add_buff(actor, BUFF_DEF_UP, 50, 3); // +50% DEF for 3 turns
+                printf("%s's defense increased!\n", actor->name);
+            } else if (skill->skill_id == SKILL_COUNTER_STANCE) {
+                character_add_buff(actor, BUFF_COUNTER, 0, 2); // Counter state for 2 turns
+                printf("%s enters counter stance!\n", actor->name);
+            } else if (skill->skill_id == SKILL_GUARD) {
+                character_add_buff(actor, BUFF_DEFEND, 0, 1); // Double defense for 1 turn
+                printf("%s takes a defensive stance!\n", actor->name);
+            } else if (skill->skill_id == SKILL_MEDITATION) {
+                character_add_buff(actor, BUFF_REGEN_MP, 10, 3); // +10 MP per turn for 3 turns
+                printf("%s meditates to restore MP!\n", actor->name);
+            } else if (skill->skill_id == SKILL_TRANQUILITY) {
+                character_add_buff(actor, BUFF_REGEN_MP, 8, 3); // +8 MP per turn for 3 turns
+                printf("%s achieves tranquility!\n", actor->name);
+            } else if (skill->skill_id == SKILL_FOCUS) {
+                character_add_buff(actor, BUFF_REGEN_MP, 12, 3); // +12 MP per turn for 3 turns
+                printf("%s focuses their mind!\n", actor->name);
+            }
             break;
-            
-        case SKILL_TYPE_DEBUFF:
-            printf("Enemy is weakened!\n");
-            // TODO: Implement debuff system
+        }
+
+        case SKILL_TYPE_DEBUFF: {
+            // Apply debuff to target enemy
+            if (skill->skill_id == SKILL_TAUNT && g_battle_state.is_boss_battle == false) {
+                // Taunt reduces enemy defense
+                if (target_index < g_battle_state.enemy_count) {
+                    // Note: Enemy buff system not fully implemented yet
+                    printf("Enemy is taunted!\n");
+                }
+            }
             break;
+        }
     }
 }
 
 void battle_process_action(BattleAction* action) {
     if (!action) return;
-    
+
     PartyMember* actor = party_get_member(g_game_state.party, action->actor_index);
     if (!actor || actor->stats.current_hp == 0) {
         // Skip dead members
         g_battle_state.current_turn = (g_battle_state.current_turn + 1) % g_battle_state.turn_count;
         return;
     }
-    
+
+    // Update buffs at start of turn (decrement durations, apply effects like MP regen)
+    character_update_buffs(actor);
+
     switch (action->type) {
         case ACTION_ATTACK: {
             if (g_battle_state.is_boss_battle) {
@@ -376,7 +418,7 @@ void battle_process_action(BattleAction* action) {
 		}
         case ACTION_DEFEND:
             printf("%s defends!\n", actor->name);
-            // Defense bonus would be applied on damage calculation
+            character_add_buff(actor, BUFF_DEFEND, 0, 1); // Doubles defense for 1 turn
             break;
             
         case ACTION_FLEE:

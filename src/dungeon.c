@@ -151,6 +151,7 @@ void dungeon_init_boss(Dungeon* dungeon, uint8_t dungeon_id) {
 
     dungeon->boss.current_hp = dungeon->boss.max_hp;
     dungeon->boss.key_item_reward = key_items[dungeon_id];
+    dungeon->boss.buff_count = 0;
 }
 
 bool dungeon_move_player(Dungeon* dungeon, int8_t dx, int8_t dy) {

@@ -515,73 +515,111 @@ void inventory_give_starting_equipment(Inventory* inv, Party* party) {
 	// Equipment bonus calculation functions
 uint8_t character_get_total_attack(PartyMember* member) {
     if (!member || !g_game_state.inventory) return member ? member->stats.strength : 0;
-    
+
     uint8_t total = member->stats.strength;
-    
+
     // Add weapon bonus
     uint8_t weapon_index = member->equipped_items[EQUIP_WEAPON];
     if (weapon_index != 0xFF && weapon_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[weapon_index].attack_bonus;
     }
-    
+
     // Add accessory bonus
     uint8_t accessory_index = member->equipped_items[EQUIP_ACCESSORY];
     if (accessory_index != 0xFF && accessory_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[accessory_index].attack_bonus;
     }
-    
+
+    // Apply buff modifiers
+    int16_t buff_mod = character_get_buff_modifier(member, BUFF_ATK_UP);
+    buff_mod -= character_get_buff_modifier(member, BUFF_ATK_DOWN);
+
+    if (buff_mod != 0) {
+        int16_t modified = total + (total * buff_mod) / 100;
+        if (modified < 1) modified = 1;
+        if (modified > 255) modified = 255;
+        total = (uint8_t)modified;
+    }
+
     return total;
 }
 
 uint8_t character_get_total_defense(PartyMember* member) {
     if (!member || !g_game_state.inventory) return member ? member->stats.defense : 0;
-    
+
     uint8_t total = member->stats.defense;
-    
+
     // Add armor bonus
     uint8_t armor_index = member->equipped_items[EQUIP_ARMOR];
     if (armor_index != 0xFF && armor_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[armor_index].defense_bonus;
     }
-    
+
     // Add helmet bonus
     uint8_t helmet_index = member->equipped_items[EQUIP_HELMET];
     if (helmet_index != 0xFF && helmet_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[helmet_index].defense_bonus;
     }
-    
+
     // Add accessory bonus
     uint8_t accessory_index = member->equipped_items[EQUIP_ACCESSORY];
     if (accessory_index != 0xFF && accessory_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[accessory_index].defense_bonus;
     }
-    
+
+    // Apply buff modifiers
+    int16_t buff_mod = character_get_buff_modifier(member, BUFF_DEF_UP);
+    buff_mod -= character_get_buff_modifier(member, BUFF_DEF_DOWN);
+
+    if (buff_mod != 0) {
+        int16_t modified = total + (total * buff_mod) / 100;
+        if (modified < 1) modified = 1;
+        if (modified > 255) modified = 255;
+        total = (uint8_t)modified;
+    }
+
+    // DEFEND buff doubles defense
+    if (character_has_buff(member, BUFF_DEFEND)) {
+        total = (total > 127) ? 255 : total * 2;
+    }
+
     return total;
 }
 
 uint8_t character_get_total_intelligence(PartyMember* member) {
     if (!member || !g_game_state.inventory) return member ? member->stats.intelligence : 0;
-    
+
     uint8_t total = member->stats.intelligence;
-    
+
     // Add weapon bonus (some weapons boost intelligence)
     uint8_t weapon_index = member->equipped_items[EQUIP_WEAPON];
     if (weapon_index != 0xFF && weapon_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[weapon_index].intelligence_bonus;
     }
-    
+
     // Add armor bonus
     uint8_t armor_index = member->equipped_items[EQUIP_ARMOR];
     if (armor_index != 0xFF && armor_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[armor_index].intelligence_bonus;
     }
-    
+
     // Add helmet bonus
     uint8_t helmet_index = member->equipped_items[EQUIP_HELMET];
     if (helmet_index != 0xFF && helmet_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[helmet_index].intelligence_bonus;
     }
-    
+
+    // Apply buff modifiers
+    int16_t buff_mod = character_get_buff_modifier(member, BUFF_INT_UP);
+    buff_mod -= character_get_buff_modifier(member, BUFF_INT_DOWN);
+
+    if (buff_mod != 0) {
+        int16_t modified = total + (total * buff_mod) / 100;
+        if (modified < 1) modified = 1;
+        if (modified > 255) modified = 255;
+        total = (uint8_t)modified;
+    }
+
     return total;
 }
 
@@ -594,6 +632,17 @@ uint8_t character_get_total_agility(PartyMember* member) {
     uint8_t accessory_index = member->equipped_items[EQUIP_ACCESSORY];
     if (accessory_index != 0xFF && accessory_index < g_game_state.inventory->equipment_count) {
         total += g_game_state.inventory->equipment[accessory_index].agility_bonus;
+    }
+
+    // Apply buff modifiers
+    int16_t buff_mod = character_get_buff_modifier(member, BUFF_AGI_UP);
+    buff_mod -= character_get_buff_modifier(member, BUFF_AGI_DOWN);
+
+    if (buff_mod != 0) {
+        int16_t modified = total + (total * buff_mod) / 100;
+        if (modified < 1) modified = 1;
+        if (modified > 255) modified = 255;
+        total = (uint8_t)modified;
     }
 
     return total;

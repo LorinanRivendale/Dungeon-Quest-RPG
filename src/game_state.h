@@ -41,6 +41,30 @@ typedef enum {
     STATE_GAME_OVER
 } GameState;
 
+// Buff/Debuff system
+#define MAX_BUFFS_PER_CHARACTER 4
+
+typedef enum {
+    BUFF_NONE = 0,
+    BUFF_ATK_UP,
+    BUFF_DEF_UP,
+    BUFF_INT_UP,
+    BUFF_AGI_UP,
+    BUFF_ATK_DOWN,
+    BUFF_DEF_DOWN,
+    BUFF_INT_DOWN,
+    BUFF_AGI_DOWN,
+    BUFF_DEFEND,      // Temporary high defense (doubled DEF for 1 turn)
+    BUFF_COUNTER,     // Will counter the next attack
+    BUFF_REGEN_MP     // Regenerate MP each turn
+} BuffType;
+
+typedef struct {
+    BuffType type;
+    int8_t magnitude;  // Percentage boost/reduction (e.g., 50 = +50%, -30 = -30%)
+    uint8_t duration;  // Turns remaining (0 = expired)
+} ActiveBuff;
+
 // Key items for dungeon completion
 typedef enum {
     KEY_ITEM_NONE = 0,
@@ -86,6 +110,8 @@ typedef struct {
     uint8_t defense;
     uint8_t level;
     KeyItem key_item_reward;
+    ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
+    uint8_t buff_count;
 } BossData;
 
 // Dungeon structure

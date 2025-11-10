@@ -68,11 +68,14 @@ bool party_add_member(Party* party, JobType job, const char* name) {
     
     // No status effects
     member->status_effects = STATUS_NONE;
-    
+
     // Initialize starting skills
 	member->skill_count = 0;
 	character_init_starting_skills(member);
-    
+
+    // Initialize buffs
+    member->buff_count = 0;
+
     party->member_count++;
     
     printf("Added %s the %s to the party!\n", member->name, job_names[job]);
@@ -260,11 +263,12 @@ static const Skill skill_database[] = {
     {SKILL_POWER_STRIKE, "Power Strike", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 4, 30, 1, 0, "Strong physical attack"},
     {SKILL_SHIELD_BASH, "Shield Bash", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 3, 20, 1, 0, "Bash enemy with shield"},
     {SKILL_TAUNT, "Taunt", SKILL_TYPE_DEBUFF, SCALE_STRENGTH, 2, 0, 1, 0, "Draw enemy attention"},
+    {SKILL_GUARD, "Guard", SKILL_TYPE_BUFF, SCALE_STRENGTH, 0, 0, 0, 0, "Double defense for 1 turn"},
 
     // Black Belt skills (scale on AGILITY)
     {SKILL_FOCUS_STRIKE, "Focus Strike", SKILL_TYPE_ATTACK, SCALE_AGILITY, 5, 35, 1, 0, "Concentrated attack"},
     {SKILL_COUNTER_STANCE, "Counter", SKILL_TYPE_BUFF, SCALE_AGILITY, 4, 0, 0, 0, "Counter next attack"},
-    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_HEAL, SCALE_AGILITY, 0, 20, 0, 0, "Restore HP"},
+    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_BUFF, SCALE_AGILITY, 0, 10, 0, 0, "Restore 10 MP per turn for 3 turns"},
 
     // Thief skills (scale on LUCK)
     {SKILL_STEAL, "Steal", SKILL_TYPE_ATTACK, SCALE_LUCK, 3, 0, 1, 0, "Steal item from enemy"},
@@ -277,6 +281,7 @@ static const Skill skill_database[] = {
     {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, "Massive fire on all"},
     {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, "Restore HP"},
     {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, "Restore more HP"},
+    {SKILL_TRANQUILITY, "Tranquility", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 8, 0, 0, "Restore 8 MP per turn for 3 turns"},
 
     // Priest spells (scale on INTELLIGENCE)
     {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 4, 50, 0, 0, "Restore HP"},
@@ -284,6 +289,7 @@ static const Skill skill_database[] = {
     {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, "Heal entire party"},
     {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 6, 0, 0, 0, "Increase defense"},
     {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 0, 0, 0, "Cure status effects"},
+    {SKILL_PRAYER, "Prayer", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 0, 20, 0, 1, "Small party heal + 5 MP regen for 2 turns"},
 
     // Mage spells (scale on INTELLIGENCE)
     {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Lightning attack"},
@@ -292,6 +298,7 @@ static const Skill skill_database[] = {
     {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Ice attack"},
     {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong ice attack"},
     {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, "Massive ice attack"},
+    {SKILL_FOCUS, "Focus", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 12, 0, 0, "Restore 12 MP per turn for 3 turns"},
 
     // Terminator
     {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, ""}
@@ -354,37 +361,140 @@ void character_init_starting_skills(PartyMember* member) {
         case JOB_KNIGHT:
             character_learn_skill(member, SKILL_POWER_STRIKE);
             character_learn_skill(member, SKILL_SHIELD_BASH);
+            character_learn_skill(member, SKILL_GUARD);
             break;
-            
+
         case JOB_BLACK_BELT:
             character_learn_skill(member, SKILL_FOCUS_STRIKE);
             character_learn_skill(member, SKILL_MEDITATION);
             break;
-            
+
         case JOB_THIEF:
             character_learn_skill(member, SKILL_BACKSTAB);
             character_learn_skill(member, SKILL_STEAL);
             break;
-            
+
         case JOB_SAGE:
             character_learn_skill(member, SKILL_FIRE);
             character_learn_skill(member, SKILL_CURE);
             character_learn_skill(member, SKILL_BOLT);
+            character_learn_skill(member, SKILL_TRANQUILITY);
             break;
-            
+
         case JOB_PRIEST:
             character_learn_skill(member, SKILL_HEAL);
             character_learn_skill(member, SKILL_HEALA);
             character_learn_skill(member, SKILL_ESUNA);
+            character_learn_skill(member, SKILL_PRAYER);
             break;
-            
+
         case JOB_MAGE:
             character_learn_skill(member, SKILL_FIRE);
             character_learn_skill(member, SKILL_BOLT);
             character_learn_skill(member, SKILL_ICE);
+            character_learn_skill(member, SKILL_FOCUS);
             break;
-            
+
         default:
             break;
     }
+}
+
+// Buff/Debuff management functions
+
+void character_add_buff(PartyMember* member, BuffType type, int8_t magnitude, uint8_t duration) {
+    if (!member || type == BUFF_NONE || duration == 0) return;
+
+    // Check if buff already exists - if so, refresh duration and magnitude
+    for (uint8_t i = 0; i < member->buff_count; i++) {
+        if (member->active_buffs[i].type == type) {
+            member->active_buffs[i].magnitude = magnitude;
+            member->active_buffs[i].duration = duration;
+            return;
+        }
+    }
+
+    // Add new buff if space available
+    if (member->buff_count < MAX_BUFFS_PER_CHARACTER) {
+        member->active_buffs[member->buff_count].type = type;
+        member->active_buffs[member->buff_count].magnitude = magnitude;
+        member->active_buffs[member->buff_count].duration = duration;
+        member->buff_count++;
+    }
+}
+
+void character_remove_buff(PartyMember* member, BuffType type) {
+    if (!member) return;
+
+    for (uint8_t i = 0; i < member->buff_count; i++) {
+        if (member->active_buffs[i].type == type) {
+            // Shift remaining buffs down
+            for (uint8_t j = i; j < member->buff_count - 1; j++) {
+                member->active_buffs[j] = member->active_buffs[j + 1];
+            }
+            member->buff_count--;
+            return;
+        }
+    }
+}
+
+void character_clear_all_buffs(PartyMember* member) {
+    if (!member) return;
+    member->buff_count = 0;
+}
+
+void character_update_buffs(PartyMember* member) {
+    if (!member) return;
+
+    // Decrement duration and remove expired buffs
+    for (uint8_t i = 0; i < member->buff_count; ) {
+        if (member->active_buffs[i].duration > 0) {
+            member->active_buffs[i].duration--;
+        }
+
+        if (member->active_buffs[i].duration == 0) {
+            // Remove expired buff
+            for (uint8_t j = i; j < member->buff_count - 1; j++) {
+                member->active_buffs[j] = member->active_buffs[j + 1];
+            }
+            member->buff_count--;
+            // Don't increment i - check the same index again
+        } else {
+            // Apply MP regen if buff exists
+            if (member->active_buffs[i].type == BUFF_REGEN_MP) {
+                uint16_t regen_amount = member->active_buffs[i].magnitude;
+                if (member->stats.current_mp + regen_amount > member->stats.max_mp) {
+                    member->stats.current_mp = member->stats.max_mp;
+                } else {
+                    member->stats.current_mp += regen_amount;
+                }
+            }
+            i++;
+        }
+    }
+}
+
+bool character_has_buff(PartyMember* member, BuffType type) {
+    if (!member) return false;
+
+    for (uint8_t i = 0; i < member->buff_count; i++) {
+        if (member->active_buffs[i].type == type) {
+            return true;
+        }
+    }
+    return false;
+}
+
+int16_t character_get_buff_modifier(PartyMember* member, BuffType stat_type) {
+    if (!member) return 0;
+
+    int16_t total_modifier = 0;
+
+    for (uint8_t i = 0; i < member->buff_count; i++) {
+        if (member->active_buffs[i].type == stat_type) {
+            total_modifier += member->active_buffs[i].magnitude;
+        }
+    }
+
+    return total_modifier;
 }
