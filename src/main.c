@@ -74,7 +74,7 @@ int main(void) {
 
     // Only create inventory and give starting equipment for NEW games (not loaded games)
     if (!game_loaded) {
-        // Create inventory
+        // Create inventory (static allocation - GameBoy compatible, no malloc!)
         g_game_state.inventory = inventory_create();
 
         // Give starting equipment to party
@@ -134,7 +134,7 @@ int main(void) {
 					game_state_init();
 					game_state_change(STATE_PARTY_SELECT);
 					handle_party_selection();
-					
+
 					if (!g_game_state.party || g_game_state.party->member_count == 0) {
 						game_running = false;
 					} else {
@@ -179,7 +179,8 @@ void handle_party_selection(void) {
     for (int i = 0; i < MAX_JOB_TYPES; i++) {
         printf("%d. %s\n", i + 1, job_names[i]);
     }
-    
+
+    // Create party (static allocation - GameBoy compatible, no malloc!)
     g_game_state.party = party_create();
 
     for (int i = 0; i < MAX_PARTY_SIZE; i++) {
@@ -1347,10 +1348,11 @@ void handle_dungeon_exploration(void) {
 							"Camp",
 							"Inventory",
 							"Party Status",
+							"Toggle Graphics Mode",
 							"Return to Dungeon"
 						};
 
-						int8_t choice = cursor_menu("DUNGEON MENU", menu_options, 4);
+						int8_t choice = cursor_menu("DUNGEON MENU", menu_options, 5);
 
 						if (choice == 0) {
 							// Camp submenu - loop until user returns
@@ -1405,8 +1407,16 @@ void handle_dungeon_exploration(void) {
 							display_party_status();
 							input_wait_for_key();
 							// Loop back to dungeon menu
+						} else if (choice == 3) {
+							// Toggle Graphics Mode
+							g_game_state.tile_graphics_mode = !g_game_state.tile_graphics_mode;
+							clear_screen();
+							printf("\nGraphics Mode: %s\n",
+								   g_game_state.tile_graphics_mode ? "TILE GRAPHICS" : "ASCII");
+							input_wait_for_key();
+							// Loop back to dungeon menu
 						} else {
-							// choice == 3 (Return to Dungeon) or -1 (cancelled)
+							// choice == 4 (Return to Dungeon) or -1 (cancelled)
 							in_dungeon_menu = false;
 						}
 					}
@@ -2151,40 +2161,32 @@ void handle_inventory_menu(void) {
                     break;
                 }
                 
-                // Build item list
-                char* item_options[MAX_INVENTORY_ITEMS + 1];
+                // Build item list (static allocation - GameBoy compatible)
+                static char item_buffers[MAX_INVENTORY_ITEMS][64];
+                const char* item_options[MAX_INVENTORY_ITEMS + 1];
                 for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
                     Item* item = &g_game_state.inventory->items[i];
-                    item_options[i] = malloc(64);
-                    snprintf(item_options[i], 64, "%s x%d", item->name, item->quantity);
+                    snprintf(item_buffers[i], 64, "%s x%d", item->name, item->quantity);
+                    item_options[i] = item_buffers[i];
                 }
                 item_options[g_game_state.inventory->item_count] = "Cancel";
 
-                int8_t item_choice = cursor_menu("SELECT ITEM", (const char**)item_options, g_game_state.inventory->item_count + 1);
-
-                // Free allocated strings
-                for (uint8_t i = 0; i < g_game_state.inventory->item_count; i++) {
-                    free(item_options[i]);
-                }
+                int8_t item_choice = cursor_menu("SELECT ITEM", item_options, g_game_state.inventory->item_count + 1);
 
                 if (item_choice >= 0 && item_choice < g_game_state.inventory->item_count) {
-                    // Build member list
-                    char* member_options[MAX_PARTY_SIZE + 1];
+                    // Build member list (static allocation - GameBoy compatible)
+                    static char member_buffers[MAX_PARTY_SIZE][64];
+                    const char* member_options[MAX_PARTY_SIZE + 1];
                     for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
                         PartyMember* member = &g_game_state.party->members[i];
-                        member_options[i] = malloc(64);
-                        snprintf(member_options[i], 64, "%s (HP:%d/%d MP:%d/%d)",
+                        snprintf(member_buffers[i], 64, "%s (HP:%d/%d MP:%d/%d)",
                                 member->name, member->stats.current_hp, member->stats.max_hp,
                                 member->stats.current_mp, member->stats.max_mp);
+                        member_options[i] = member_buffers[i];
                     }
                     member_options[g_game_state.party->member_count] = "Cancel";
 
-                    int8_t member_choice = cursor_menu("USE ON", (const char**)member_options, g_game_state.party->member_count + 1);
-
-                    // Free allocated strings
-                    for (uint8_t i = 0; i < g_game_state.party->member_count; i++) {
-                        free(member_options[i]);
-                    }
+                    int8_t member_choice = cursor_menu("USE ON", member_options, g_game_state.party->member_count + 1);
 
                     if (member_choice >= 0 && member_choice < g_game_state.party->member_count) {
                         inventory_use_item(g_game_state.inventory, item_choice, member_choice);

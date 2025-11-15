@@ -10,6 +10,11 @@
 
 GameStateData g_game_state;
 
+// Global (non-static) party and inventory structures (GameBoy-compatible - no malloc!)
+// These are referenced from party.c and inventory.c
+Party g_static_party;
+Inventory g_static_inventory;
+
 const char* dungeon_names[MAX_DUNGEONS + 1] = {
     "Cave of Earth",
     "Water Temple",
@@ -20,7 +25,7 @@ const char* dungeon_names[MAX_DUNGEONS + 1] = {
 
 void game_state_init(void) {
     memset(&g_game_state, 0, sizeof(GameStateData));
-    
+
     g_game_state.current_state = STATE_TITLE;
     g_game_state.party = NULL;
     g_game_state.inventory = NULL;
@@ -29,6 +34,7 @@ void game_state_init(void) {
     g_game_state.final_dungeon_unlocked = false;
     g_game_state.game_time = 0;
     g_game_state.gold = 200; // Starting gold (increased from 100 for better early economy)
+    g_game_state.tile_graphics_mode = true; // Start with tile graphics enabled
     
     // Initialize all dungeons as not initialized
     for (int i = 0; i <= MAX_DUNGEONS; i++) {
@@ -88,13 +94,10 @@ void game_state_update(void) {
 }
 
 void game_state_cleanup(void) {
-    if (g_game_state.party) {
-        party_destroy(g_game_state.party);
-    }
-
-    if (g_game_state.inventory) {
-        inventory_destroy(g_game_state.inventory);
-    }
+    // Party and Inventory point to static structures
+    // Just reset pointers to NULL (no free needed!)
+    g_game_state.party = NULL;
+    g_game_state.inventory = NULL;
 
     // Dungeons are statically allocated, no cleanup needed
 

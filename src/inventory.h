@@ -69,8 +69,7 @@ typedef struct Inventory {
 } Inventory;
 
 // Inventory management
-Inventory* inventory_create(void);
-void inventory_destroy(Inventory* inv);
+Inventory* inventory_create(void);  // Returns pointer to static inventory (GameBoy-compatible - no malloc!)
 bool inventory_add_item(Inventory* inv, uint8_t item_id, uint8_t quantity);
 bool inventory_add_equipment(Inventory* inv, uint8_t equip_id);
 bool inventory_remove_item(Inventory* inv, uint8_t index, uint8_t quantity);

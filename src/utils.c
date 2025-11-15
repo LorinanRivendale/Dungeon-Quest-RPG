@@ -20,6 +20,27 @@
 extern BattleState g_battle_state;
 extern const char* job_names[MAX_JOB_TYPES];
 
+// GameBoy Pocket Color Palette (4 shades of gray)
+// ANSI color codes: \033[XYm where X is style, Y is color
+#define GB_COLOR_DARKEST   "\033[90m"  // Bright Black (Dark Gray) - for walls
+#define GB_COLOR_DARK      "\033[37m"  // White (appears as light gray) - for floors
+#define GB_COLOR_LIGHT     "\033[97m"  // Bright White - for interactive elements
+#define GB_COLOR_LIGHTEST  "\033[1;97m" // Bold Bright White - for player
+#define GB_COLOR_RESET     "\033[0m"   // Reset to default
+
+// Unicode Tile Graphics
+// These characters create a more visual representation similar to GameBoy tiles
+#define TILE_CHAR_WALL      "█"  // Full block for walls
+#define TILE_CHAR_FLOOR     "·"  // Middle dot for floor
+#define TILE_CHAR_DOOR      "▒"  // Medium shade for doors
+#define TILE_CHAR_STAIRS_UP "△"  // Triangle up
+#define TILE_CHAR_STAIRS_DN "▽"  // Triangle down
+#define TILE_CHAR_TREASURE  "◇"  // Diamond for treasure
+#define TILE_CHAR_BOSS      "♜"  // Chess rook for boss
+#define TILE_CHAR_ENTRANCE  "▣"  // Squared square for entrance
+#define TILE_CHAR_PLAYER    "◉"  // Fisheye for player
+#define TILE_CHAR_UNKNOWN   "░"  // Light shade for unexplored
+
 // Simple LCG random number generator
 static uint32_t random_seed_value = 12345;
 
@@ -490,22 +511,87 @@ bool virtual_keyboard(const char* prompt, char* buffer, uint8_t max_length) {
     }
 }
 
+// Helper function to print a tile (supports both ASCII and tile graphics modes)
+static void print_tile_character(TileType type, bool is_player, bool is_explored, bool tile_mode) {
+    if (tile_mode) {
+        // Tile Graphics Mode (GameBoy Pocket style with Unicode + ANSI colors)
+        if (is_player) {
+            printf("%s%s%s", GB_COLOR_LIGHTEST, TILE_CHAR_PLAYER, GB_COLOR_RESET);
+        } else if (!is_explored) {
+            printf("%s%s%s", GB_COLOR_DARKEST, TILE_CHAR_UNKNOWN, GB_COLOR_RESET);
+        } else {
+            switch (type) {
+                case TILE_WALL:
+                    printf("%s%s%s", GB_COLOR_DARKEST, TILE_CHAR_WALL, GB_COLOR_RESET);
+                    break;
+                case TILE_FLOOR:
+                    printf("%s%s%s", GB_COLOR_DARK, TILE_CHAR_FLOOR, GB_COLOR_RESET);
+                    break;
+                case TILE_DOOR:
+                    printf("%s%s%s", GB_COLOR_DARK, TILE_CHAR_DOOR, GB_COLOR_RESET);
+                    break;
+                case TILE_STAIRS_UP:
+                    printf("%s%s%s", GB_COLOR_LIGHT, TILE_CHAR_STAIRS_UP, GB_COLOR_RESET);
+                    break;
+                case TILE_STAIRS_DOWN:
+                    printf("%s%s%s", GB_COLOR_LIGHT, TILE_CHAR_STAIRS_DN, GB_COLOR_RESET);
+                    break;
+                case TILE_TREASURE:
+                    printf("%s%s%s", GB_COLOR_LIGHT, TILE_CHAR_TREASURE, GB_COLOR_RESET);
+                    break;
+                case TILE_BOSS_ROOM:
+                    printf("%s%s%s", GB_COLOR_LIGHT, TILE_CHAR_BOSS, GB_COLOR_RESET);
+                    break;
+                case TILE_ENTRANCE:
+                    printf("%s%s%s", GB_COLOR_LIGHT, TILE_CHAR_ENTRANCE, GB_COLOR_RESET);
+                    break;
+                default:
+                    printf(" ");
+                    break;
+            }
+        }
+    } else {
+        // ASCII Mode (classic text mode)
+        if (is_player) {
+            printf("@");
+        } else if (!is_explored) {
+            printf("?");
+        } else {
+            switch (type) {
+                case TILE_WALL: printf("#"); break;
+                case TILE_FLOOR: printf("."); break;
+                case TILE_DOOR: printf("+"); break;
+                case TILE_STAIRS_UP: printf("<"); break;
+                case TILE_STAIRS_DOWN: printf(">"); break;
+                case TILE_TREASURE: printf("$"); break;
+                case TILE_BOSS_ROOM: printf("B"); break;
+                case TILE_ENTRANCE: printf("E"); break;
+                default: printf(" "); break;
+            }
+        }
+    }
+}
+
 void display_dungeon(void) {
     if (!g_game_state.dungeon_initialized[g_game_state.current_dungeon_index]) return;
 
     Dungeon* dungeon = &g_game_state.dungeons[g_game_state.current_dungeon_index];
     DungeonFloor* floor = &dungeon->floors[dungeon->current_floor];
-    
+    bool tile_mode = g_game_state.tile_graphics_mode;
+
     printf("\n=== %s - Floor %d ===\n", dungeon->name, dungeon->current_floor + 1);
-    
+    if (tile_mode) {
+        printf("[ TILE GRAPHICS MODE ]\n");
+    }
+
     // Display map with better visibility
     int view_range = 5;
-    
+
     for (int y = floor->player_y - view_range; y <= floor->player_y + view_range; y++) {
         for (int x = floor->player_x - view_range; x <= floor->player_x + view_range; x++) {
             // Player position
             if (x == floor->player_x && y == floor->player_y) {
-                printf("@");
+                print_tile_character(TILE_FLOOR, true, true, tile_mode);
             }
             // Out of bounds
             else if (x < 0 || x >= DUNGEON_WIDTH || y < 0 || y >= DUNGEON_HEIGHT) {
@@ -516,49 +602,30 @@ void display_dungeon(void) {
                 int dx = abs(x - floor->player_x);
                 int dy = abs(y - floor->player_y);
                 bool is_adjacent = (dx <= 1 && dy <= 1);
-                
+
                 // Show tile if explored OR adjacent to player
-                if (floor->tiles[y][x].explored || is_adjacent) {
-                    switch (floor->tiles[y][x].type) {
-                        case TILE_WALL: 
-                            printf("#"); 
-                            break;
-                        case TILE_FLOOR: 
-                            printf("."); 
-                            break;
-                        case TILE_DOOR: 
-                            printf("+"); 
-                            break;
-                        case TILE_STAIRS_UP: 
-                            printf("<"); 
-                            break;
-                        case TILE_STAIRS_DOWN: 
-                            printf(">"); 
-                            break;
-                        case TILE_TREASURE: 
-                            printf("$"); 
-                            break;
-                        case TILE_BOSS_ROOM: 
-                            printf("B"); 
-                            break;
-                        case TILE_ENTRANCE: 
-                            printf("E"); 
-                            break;
-                        default: 
-                            printf(" "); 
-                            break;
-                    }
-                } else {
-                    // Unexplored and not adjacent
-                    printf("?");
-                }
+                bool explored = floor->tiles[y][x].explored || is_adjacent;
+                print_tile_character(floor->tiles[y][x].type, false, explored, tile_mode);
             }
         }
         printf("\n");
     }
-    
+
     // Map legend
-    printf("\nLegend: @ = You, # = Wall, . = Floor, > = Down, < = Up\n");
-    printf("        $ = Treasure, B = Boss, E = Entrance\n");
+    if (tile_mode) {
+        printf("\nLegend: %s%s%s = You, %s%s%s = Wall, %s%s%s = Floor, %s%s%s = Down, %s%s%s = Up\n",
+               GB_COLOR_LIGHTEST, TILE_CHAR_PLAYER, GB_COLOR_RESET,
+               GB_COLOR_DARKEST, TILE_CHAR_WALL, GB_COLOR_RESET,
+               GB_COLOR_DARK, TILE_CHAR_FLOOR, GB_COLOR_RESET,
+               GB_COLOR_LIGHT, TILE_CHAR_STAIRS_DN, GB_COLOR_RESET,
+               GB_COLOR_LIGHT, TILE_CHAR_STAIRS_UP, GB_COLOR_RESET);
+        printf("        %s%s%s = Treasure, %s%s%s = Boss, %s%s%s = Entrance\n",
+               GB_COLOR_LIGHT, TILE_CHAR_TREASURE, GB_COLOR_RESET,
+               GB_COLOR_LIGHT, TILE_CHAR_BOSS, GB_COLOR_RESET,
+               GB_COLOR_LIGHT, TILE_CHAR_ENTRANCE, GB_COLOR_RESET);
+    } else {
+        printf("\nLegend: @ = You, # = Wall, . = Floor, > = Down, < = Up\n");
+        printf("        $ = Treasure, B = Boss, E = Entrance\n");
+    }
     printf("\nControls: WASD=Move, Z=Interact, X=Back, Enter/I=Menu\n");
 }

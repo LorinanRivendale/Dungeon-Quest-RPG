@@ -136,8 +136,7 @@ typedef struct Party {
 } Party;
 
 // Party management functions
-Party* party_create(void);
-void party_destroy(Party* party);
+Party* party_create(void);  // Returns pointer to static party (GameBoy-compatible - no malloc!)
 bool party_add_member(Party* party, JobType job, const char* name);
 void party_remove_member(Party* party, uint8_t index);
 PartyMember* party_get_member(Party* party, uint8_t index);

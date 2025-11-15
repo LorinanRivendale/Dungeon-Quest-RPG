@@ -134,8 +134,8 @@ typedef struct Inventory Inventory;
 // Main game state structure
 typedef struct {
     GameState current_state;
-    Party* party;
-    Inventory* inventory;
+    Party* party;       // Points to static party (GameBoy-compatible - no malloc)
+    Inventory* inventory; // Points to static inventory (GameBoy-compatible - no malloc)
     Dungeon dungeons[MAX_DUNGEONS + 1]; // 4 regular + 1 final (static allocation)
     bool dungeon_initialized[MAX_DUNGEONS + 1]; // Track which dungeons are initialized
     uint8_t key_items_collected; // Bitfield for key items
@@ -144,6 +144,7 @@ typedef struct {
     bool final_dungeon_unlocked;
     uint32_t game_time; // Frame counter or time tracker
     uint16_t gold;
+    bool tile_graphics_mode; // Toggle between ASCII and tile graphics
 } GameStateData;
 
 // Global game state

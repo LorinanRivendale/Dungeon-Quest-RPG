@@ -5,21 +5,16 @@
 #include <string.h>
 #include <stdio.h>
 
-Inventory* inventory_create(void) {
-    Inventory* inv = (Inventory*)malloc(sizeof(Inventory));
-    if (!inv) return NULL;
-    
-    memset(inv, 0, sizeof(Inventory));
-    inv->item_count = 0;
-    inv->equipment_count = 0;
-    
-    return inv;
-}
+// External reference to static inventory in game_state.c
+extern Inventory g_static_inventory;
 
-void inventory_destroy(Inventory* inv) {
-    if (inv) {
-        free(inv);
-    }
+Inventory* inventory_create(void) {
+    // Initialize and return pointer to static inventory (no malloc!)
+    memset(&g_static_inventory, 0, sizeof(Inventory));
+    g_static_inventory.item_count = 0;
+    g_static_inventory.equipment_count = 0;
+
+    return &g_static_inventory;
 }
 
 bool inventory_add_item(Inventory* inv, uint8_t item_id, uint8_t quantity) {

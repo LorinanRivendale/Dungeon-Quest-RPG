@@ -28,21 +28,16 @@ const CharacterStats job_base_stats[MAX_JOB_TYPES] = {
     {55, 55, 40, 40, 5, 5, 16, 6, 5, 1, 0}
 };
 
-Party* party_create(void) {
-    Party* party = (Party*)malloc(sizeof(Party));
-    if (!party) return NULL;
-    
-    memset(party, 0, sizeof(Party));
-    party->member_count = 0;
-    party->active_member = 0;
-    
-    return party;
-}
+// External reference to static party in game_state.c
+extern Party g_static_party;
 
-void party_destroy(Party* party) {
-    if (party) {
-        free(party);
-    }
+Party* party_create(void) {
+    // Initialize and return pointer to static party (no malloc!)
+    memset(&g_static_party, 0, sizeof(Party));
+    g_static_party.member_count = 0;
+    g_static_party.active_member = 0;
+
+    return &g_static_party;
 }
 
 bool party_add_member(Party* party, JobType job, const char* name) {

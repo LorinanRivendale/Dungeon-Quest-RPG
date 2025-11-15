@@ -69,3 +69,14 @@ test_output/
 # Game save files
 *.sav
 *.dat
+
+# GBDK build artifacts
+*.ihx
+*.noi
+*.lst
+*.sym
+*.cdb
+*.adb
+GB/*.gb
+GB/*.gbc
+gbdk-linux64.tar.gz
