@@ -157,6 +157,108 @@ void battle_execute_turn(void) {
     }
 }
 
+// Stealable item tables for each enemy type
+typedef struct {
+    ConsumableItem item_type;
+    uint8_t chance;  // Percentage chance to steal this item (out of 100)
+    uint8_t quantity_min;
+    uint8_t quantity_max;
+} StealableItem;
+
+static const StealableItem stealable_items_by_enemy[ENEMY_TYPE_COUNT][3] = {
+    // ENEMY_GOBLIN
+    {
+        {ITEM_POTION, 50, 1, 1},
+        {ITEM_ANTIDOTE, 30, 1, 1},
+        {ITEM_CONSUMABLE_COUNT, 20, 0, 0}  // 20% chance of nothing (using COUNT as sentinel)
+    },
+    // ENEMY_ORC
+    {
+        {ITEM_POTION, 40, 1, 2},
+        {ITEM_HI_POTION, 35, 1, 1},
+        {ITEM_CONSUMABLE_COUNT, 25, 0, 0}
+    },
+    // ENEMY_SKELETON
+    {
+        {ITEM_ANTIDOTE, 45, 1, 1},
+        {ITEM_ETHER, 30, 1, 1},
+        {ITEM_CONSUMABLE_COUNT, 25, 0, 0}
+    },
+    // ENEMY_WOLF
+    {
+        {ITEM_POTION, 55, 1, 1},
+        {ITEM_TENT, 25, 1, 1},
+        {ITEM_CONSUMABLE_COUNT, 20, 0, 0}
+    },
+    // ENEMY_DRAGON
+    {
+        {ITEM_HI_POTION, 40, 1, 2},
+        {ITEM_ETHER, 35, 1, 1},
+        {ITEM_ELIXIR, 15, 1, 1}
+    },
+    // ENEMY_DEMON
+    {
+        {ITEM_ELIXIR, 45, 1, 1},
+        {ITEM_ETHER, 35, 1, 2},
+        {ITEM_HI_POTION, 20, 1, 1}
+    }
+};
+
+// Process steal attempt
+void battle_process_steal(PartyMember* actor, uint8_t target_index) {
+    if (!actor || target_index >= g_battle_state.enemy_count) return;
+
+    Enemy* enemy = &g_battle_state.enemies[target_index];
+    if (!enemy->is_alive) {
+        printf("%s is already defeated!\n", enemy->name);
+        return;
+    }
+
+    // Base success rate: 50% + (Luck / 2)%
+    uint8_t base_success = 50 + (character_get_total_luck(actor) / 2);
+    // Penalty based on enemy level
+    uint8_t level_penalty = enemy->level * 2;
+    uint8_t final_success = (base_success > level_penalty) ? (base_success - level_penalty) : 10;
+
+    // Cap at 90%
+    if (final_success > 90) final_success = 90;
+
+    // Roll for success
+    if (random_range(1, 100) > final_success) {
+        printf("%s's steal attempt failed!\n", actor->name);
+        return;
+    }
+
+    // Determine what to steal based on enemy type
+    const StealableItem* steal_table = stealable_items_by_enemy[enemy->type];
+    uint8_t roll = random_range(1, 100);
+    uint8_t cumulative_chance = 0;
+
+    for (uint8_t i = 0; i < 3; i++) {
+        cumulative_chance += steal_table[i].chance;
+        if (roll <= cumulative_chance) {
+            if (steal_table[i].item_type == ITEM_CONSUMABLE_COUNT) {
+                printf("%s found nothing to steal!\n", actor->name);
+                return;
+            }
+
+            // Determine quantity
+            uint8_t quantity = random_range(steal_table[i].quantity_min, steal_table[i].quantity_max);
+
+            // Add item to inventory
+            if (inventory_add_item(g_game_state.inventory, steal_table[i].item_type, quantity)) {
+                Item item = item_create_consumable(steal_table[i].item_type);
+                printf("%s stole %s x%d!\n", actor->name, item.name, quantity);
+            } else {
+                printf("%s's inventory is full!\n", actor->name);
+            }
+            return;
+        }
+    }
+
+    // Shouldn't reach here, but just in case
+    printf("%s found nothing to steal!\n", actor->name);
+}
 
 void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index) {
     if (!actor) return;
@@ -244,8 +346,34 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
                             printf("%s takes %d damage and is defeated!\n", enemy->name, damage);
                         } else {
                             enemy->current_hp -= damage;
-                            printf("%s takes %d damage! (%d HP remaining)\n", 
+                            printf("%s takes %d damage! (%d HP remaining)\n",
                                    enemy->name, damage, enemy->current_hp);
+
+                            // Apply status effect if skill has one and enemy survived
+                            if (skill->status_effect != STATUS_NONE && skill->status_chance > 0) {
+                                if (random_range(1, 100) <= skill->status_chance) {
+                                    // Add to bitfield
+                                    enemy->status_effects |= skill->status_effect;
+
+                                    // Add to duration tracker
+                                    bool found = false;
+                                    for (uint8_t j = 0; j < enemy->status_effect_count; j++) {
+                                        if (enemy->active_status_effects[j].status_type == skill->status_effect) {
+                                            enemy->active_status_effects[j].duration = skill->status_duration;
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!found && enemy->status_effect_count < MAX_STATUS_EFFECTS_PER_CHARACTER) {
+                                        enemy->active_status_effects[enemy->status_effect_count].status_type = skill->status_effect;
+                                        enemy->active_status_effects[enemy->status_effect_count].duration = skill->status_duration;
+                                        enemy->status_effect_count++;
+                                    }
+
+                                    printf("%s is afflicted!\n", enemy->name);
+                                }
+                            }
                         }
                     }
                 }
@@ -278,6 +406,32 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
                             enemy->current_hp -= damage;
                             printf("%s takes %d damage! (%d HP remaining)\n",
                                    enemy->name, damage, enemy->current_hp);
+
+                            // Apply status effect if skill has one and enemy survived
+                            if (skill->status_effect != STATUS_NONE && skill->status_chance > 0) {
+                                if (random_range(1, 100) <= skill->status_chance) {
+                                    // Add to bitfield
+                                    enemy->status_effects |= skill->status_effect;
+
+                                    // Add to duration tracker
+                                    bool found = false;
+                                    for (uint8_t j = 0; j < enemy->status_effect_count; j++) {
+                                        if (enemy->active_status_effects[j].status_type == skill->status_effect) {
+                                            enemy->active_status_effects[j].duration = skill->status_duration;
+                                            found = true;
+                                            break;
+                                        }
+                                    }
+
+                                    if (!found && enemy->status_effect_count < MAX_STATUS_EFFECTS_PER_CHARACTER) {
+                                        enemy->active_status_effects[enemy->status_effect_count].status_type = skill->status_effect;
+                                        enemy->active_status_effects[enemy->status_effect_count].duration = skill->status_duration;
+                                        enemy->status_effect_count++;
+                                    }
+
+                                    printf("%s is afflicted with a status effect!\n", enemy->name);
+                                }
+                            }
                         }
                     }
                 }
@@ -341,13 +495,86 @@ void battle_use_skill(PartyMember* actor, uint8_t skill_id, uint8_t target_index
         }
 
         case SKILL_TYPE_DEBUFF: {
-            // Apply debuff to target enemy
-            if (skill->skill_id == SKILL_TAUNT && g_battle_state.is_boss_battle == false) {
-                // Taunt reduces enemy defense
+            // Apply status effect if skill has one
+            if (skill->status_effect != STATUS_NONE && skill->status_chance > 0) {
+                if (skill->target_all) {
+                    // Apply to all enemies
+                    for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
+                        if (g_battle_state.enemies[i].is_alive) {
+                            Enemy* enemy = &g_battle_state.enemies[i];
+
+                            if (random_range(1, 100) <= skill->status_chance) {
+                                // Add to bitfield
+                                enemy->status_effects |= skill->status_effect;
+
+                                // Add to duration tracker
+                                bool found = false;
+                                for (uint8_t j = 0; j < enemy->status_effect_count; j++) {
+                                    if (enemy->active_status_effects[j].status_type == skill->status_effect) {
+                                        enemy->active_status_effects[j].duration = skill->status_duration;
+                                        found = true;
+                                        break;
+                                    }
+                                }
+
+                                if (!found && enemy->status_effect_count < MAX_STATUS_EFFECTS_PER_CHARACTER) {
+                                    enemy->active_status_effects[enemy->status_effect_count].status_type = skill->status_effect;
+                                    enemy->active_status_effects[enemy->status_effect_count].duration = skill->status_duration;
+                                    enemy->status_effect_count++;
+                                }
+
+                                printf("%s is afflicted!\n", enemy->name);
+                            } else {
+                                printf("%s resisted!\n", enemy->name);
+                            }
+                        }
+                    }
+                } else {
+                    // Single target
+                    if (target_index < g_battle_state.enemy_count && g_battle_state.enemies[target_index].is_alive) {
+                        Enemy* enemy = &g_battle_state.enemies[target_index];
+
+                        if (random_range(1, 100) <= skill->status_chance) {
+                            // Add to bitfield
+                            enemy->status_effects |= skill->status_effect;
+
+                            // Add to duration tracker
+                            bool found = false;
+                            for (uint8_t j = 0; j < enemy->status_effect_count; j++) {
+                                if (enemy->active_status_effects[j].status_type == skill->status_effect) {
+                                    enemy->active_status_effects[j].duration = skill->status_duration;
+                                    found = true;
+                                    break;
+                                }
+                            }
+
+                            if (!found && enemy->status_effect_count < MAX_STATUS_EFFECTS_PER_CHARACTER) {
+                                enemy->active_status_effects[enemy->status_effect_count].status_type = skill->status_effect;
+                                enemy->active_status_effects[enemy->status_effect_count].duration = skill->status_duration;
+                                enemy->status_effect_count++;
+                            }
+
+                            printf("%s is afflicted with a status effect!\n", enemy->name);
+                        } else {
+                            printf("%s resisted the status effect!\n", enemy->name);
+                        }
+                    }
+                }
+            } else if (skill->skill_id == SKILL_TAUNT && g_battle_state.is_boss_battle == false) {
+                // Legacy taunt (TODO: convert to status effect system)
                 if (target_index < g_battle_state.enemy_count) {
-                    // Note: Enemy buff system not fully implemented yet
                     printf("Enemy is taunted!\n");
                 }
+            }
+            break;
+        }
+
+        case SKILL_TYPE_STEAL: {
+            // Process steal attempt
+            if (g_battle_state.is_boss_battle) {
+                printf("You can't steal from a boss!\n");
+            } else {
+                battle_process_steal(actor, target_index);
             }
             break;
         }

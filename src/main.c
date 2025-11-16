@@ -28,6 +28,7 @@ void handle_equipment_buy(void);
 void handle_equipment_sell(void);
 void handle_equipment_management(void);
 void handle_tavern(void);
+void handle_treasure_chest(uint8_t dungeon_id);
 
 int main(void) {
     // Initialize game
@@ -208,8 +209,65 @@ void handle_party_selection(void) {
     printf("\n");
     display_party_status();
     input_wait_for_key();
-    
+
     game_state_change(STATE_DUNGEON_SELECT);
+}
+
+// Tiered treasure system based on dungeon difficulty
+void handle_treasure_chest(uint8_t dungeon_id) {
+    printf("\nFound treasure chest!\n");
+
+    // Treasure distribution: 40% gold, 30% consumable, 30% equipment
+    uint8_t roll = random_range(1, 100);
+
+    if (roll <= 40) {
+        // Gold reward scales with dungeon tier
+        uint16_t base_gold = 50 + (dungeon_id * 50);
+        uint16_t gold = random_range(base_gold, base_gold * 2);
+        g_game_state.gold += gold;
+        printf("Found %d gold!\n", gold);
+    } else if (roll <= 70) {
+        // Consumable items - better items in higher dungeons
+        uint8_t item_id;
+        if (dungeon_id == 0) {
+            // Cave of Earth: Basic consumables
+            item_id = random_range(ITEM_POTION, ITEM_ETHER);
+        } else if (dungeon_id <= 2) {
+            // Water Temple, Volcano Keep: Better consumables
+            item_id = random_range(ITEM_HI_POTION, ITEM_ELIXIR);
+        } else {
+            // Sky Tower, Final Sanctum: Best consumables
+            item_id = random_range(ITEM_ETHER, ITEM_ELIXIR);
+        }
+        inventory_add_item(g_game_state.inventory, item_id, 1);
+    } else {
+        // Equipment drops - tiered by dungeon
+        uint8_t equip_id = 0;
+
+        if (dungeon_id == 0) {
+            // Cave of Earth: Tier 1 equipment (starting gear)
+            uint8_t tier1_pool[] = {0, 1, 2, 4, 5, 6, 8, 20, 21, 22, 24, 40, 42, 60, 61, 62};
+            equip_id = tier1_pool[random_range(0, 15)];
+        } else if (dungeon_id == 1) {
+            // Water Temple: Tier 2 equipment (mid-game)
+            uint8_t tier2_pool[] = {10, 11, 12, 13, 14, 26, 27, 28, 43, 44, 45, 63, 64};
+            equip_id = tier2_pool[random_range(0, 12)];
+        } else if (dungeon_id == 2) {
+            // Volcano Keep: Mix of Tier 2 and Tier 3
+            uint8_t tier23_pool[] = {10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 26, 27, 28, 29, 30, 31, 46, 47, 48, 65, 66, 67};
+            equip_id = tier23_pool[random_range(0, 21)];
+        } else if (dungeon_id == 3) {
+            // Sky Tower: Tier 3 equipment (late-game)
+            uint8_t tier3_pool[] = {15, 16, 17, 18, 19, 29, 30, 31, 46, 47, 48, 65, 66, 67};
+            equip_id = tier3_pool[random_range(0, 13)];
+        } else {
+            // Final Sanctum: Tier 4 legendary equipment
+            uint8_t tier4_pool[] = {32, 33, 49, 68, 69, 70};
+            equip_id = tier4_pool[random_range(0, 5)];
+        }
+
+        inventory_add_equipment(g_game_state.inventory, equip_id);
+    }
 }
 
 void handle_town(void) {
@@ -1292,22 +1350,13 @@ void handle_dungeon_exploration(void) {
                             game_state_change(STATE_DUNGEON_SELECT);
                         }
                     } else if (current_tile == TILE_TREASURE) {
-                        printf("\nFound treasure chest!\n");
-                        
-                        // Random treasure
-                        if (random_chance(70)) {
-                            uint16_t gold = random_range(50, 200);
-                            g_game_state.gold += gold;
-                            printf("Found %d gold!\n", gold);
-                        } else {
-                            uint8_t item_id = random_range(ITEM_POTION, ITEM_ETHER);
-                            inventory_add_item(g_game_state.inventory, item_id, 1);
-                        }
-                        
+                        // Use tiered treasure system
+                        handle_treasure_chest(g_game_state.current_dungeon_index);
+
                         // Mark treasure as taken
                         DungeonFloor* floor = &current_dungeon->floors[current_dungeon->current_floor];
                         floor->tiles[floor->player_y][floor->player_x].type = TILE_FLOOR;
-                        
+
                         input_wait_for_key();
                     } else if (current_tile == TILE_BOSS_ROOM) {
                         if (!current_dungeon->boss_defeated) {

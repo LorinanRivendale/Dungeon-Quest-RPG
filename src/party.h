@@ -32,14 +32,18 @@ typedef enum {
     EQUIP_SLOT_COUNT
 } EquipmentSlot;
 
-// Status effects
+// Status effects (bitfield values)
 typedef enum {
     STATUS_NONE = 0,
-    STATUS_POISON = 1,
-    STATUS_PARALYSIS = 2,
-    STATUS_SLEEP = 4,
-    STATUS_CONFUSION = 8,
-    STATUS_DEAD = 16
+    STATUS_POISON = 1,        // Damage over time (5-10% max HP per turn)
+    STATUS_PARALYSIS = 2,     // Cannot act (50% chance to skip turn)
+    STATUS_SLEEP = 4,         // Cannot act (woken by damage)
+    STATUS_CONFUSION = 8,     // Attacks random target
+    STATUS_DEAD = 16,         // Character is defeated
+    STATUS_BLIND = 32,        // Reduced accuracy (50% hit chance)
+    STATUS_SLOW = 64,         // Reduced agility (acts later in turn order)
+    STATUS_SILENCE = 128,     // Cannot use skills/magic
+    STATUS_STONE = 256        // Cannot act (permanent until cured)
 } StatusEffect;
 
 // Skill/Spell types
@@ -47,7 +51,8 @@ typedef enum {
     SKILL_TYPE_ATTACK = 0,
     SKILL_TYPE_HEAL,
     SKILL_TYPE_BUFF,
-    SKILL_TYPE_DEBUFF
+    SKILL_TYPE_DEBUFF,
+    SKILL_TYPE_STEAL
 } SkillType;
 
 // Stat used for skill scaling
@@ -68,6 +73,9 @@ typedef struct {
     uint8_t power;           // Damage or healing amount (base)
     uint8_t target_enemy;    // 1 = targets enemy, 0 = targets ally
     uint8_t target_all;      // 1 = targets all, 0 = single target
+    uint16_t status_effect;  // StatusEffect to apply (0 = none)
+    uint8_t status_chance;   // % chance to apply status (0-100)
+    uint8_t status_duration; // Duration of status in turns
     const char* description;
 } Skill;
 
@@ -89,6 +97,8 @@ typedef struct {
 #define SKILL_STEAL 20
 #define SKILL_BACKSTAB 21
 #define SKILL_SMOKE_BOMB 22
+#define SKILL_POISON_BLADE 23
+#define SKILL_FLASH 24
 
 // Sage spells
 #define SKILL_FIRE 30
@@ -97,6 +107,9 @@ typedef struct {
 #define SKILL_CURE 33
 #define SKILL_CURA 34
 #define SKILL_TRANQUILITY 35
+#define SKILL_TIME_WARP 36
+#define SKILL_MUTE 37
+#define SKILL_PETRIFY 38
 
 // Priest spells
 #define SKILL_HEAL 40
@@ -105,6 +118,7 @@ typedef struct {
 #define SKILL_PROTECT 43
 #define SKILL_ESUNA 44
 #define SKILL_PRAYER 45
+#define SKILL_BLINDING_LIGHT 46
 
 // Mage spells
 #define SKILL_BOLT 50
@@ -114,6 +128,10 @@ typedef struct {
 #define SKILL_ICE2 54
 #define SKILL_ICE3 55
 #define SKILL_FOCUS 56
+#define SKILL_SLOW 57
+#define SKILL_SILENCE 58
+#define SKILL_TOXIC_CLOUD 59
+#define SKILL_STONE_GAZE 60
 
 // Party member structure
 typedef struct PartyMember {
@@ -121,11 +139,13 @@ typedef struct PartyMember {
     JobType job;
     CharacterStats stats;
     uint8_t equipped_items[EQUIP_SLOT_COUNT]; // Indices to inventory equipment
-    uint8_t status_effects; // Bitfield
+    uint8_t status_effects; // Bitfield (for quick checking)
     uint8_t skills[MAX_SKILLS]; // Skill/spell IDs (for later implementation)
     uint8_t skill_count;
     ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
     uint8_t buff_count;
+    ActiveStatusEffect active_status_effects[MAX_STATUS_EFFECTS_PER_CHARACTER];
+    uint8_t status_effect_count;
 } PartyMember;
 
 // Party structure

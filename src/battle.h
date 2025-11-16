@@ -1,6 +1,7 @@
 #ifndef BATTLE_H
 #define BATTLE_H
 
+#include "game_state.h"
 #include "party.h"
 #include "dungeon.h"
 #include <stdint.h>
@@ -32,8 +33,11 @@ typedef struct {
     uint16_t exp_reward;
     uint16_t gold_reward;
     bool is_alive;
+    uint8_t status_effects; // Bitfield for quick checking
     ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
     uint8_t buff_count;
+    ActiveStatusEffect active_status_effects[MAX_STATUS_EFFECTS_PER_CHARACTER];
+    uint8_t status_effect_count;
 } Enemy;
 
 // Battle action types

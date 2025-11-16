@@ -254,49 +254,61 @@ void character_gain_experience(PartyMember* member, uint32_t exp) {
 // Skill database
 // Format: {skill_id, name, type, scaling_stat, mp_cost, power, target_enemy, target_all, description}
 static const Skill skill_database[] = {
+    // Format: skill_id, name, type, scaling_stat, mp_cost, power, target_enemy, target_all, status_effect, status_chance, status_duration, description
+
     // Knight skills (scale on STRENGTH)
-    {SKILL_POWER_STRIKE, "Power Strike", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 4, 30, 1, 0, "Strong physical attack"},
-    {SKILL_SHIELD_BASH, "Shield Bash", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 3, 20, 1, 0, "Bash enemy with shield"},
-    {SKILL_TAUNT, "Taunt", SKILL_TYPE_DEBUFF, SCALE_STRENGTH, 2, 0, 1, 0, "Draw enemy attention"},
-    {SKILL_GUARD, "Guard", SKILL_TYPE_BUFF, SCALE_STRENGTH, 0, 0, 0, 0, "Double defense for 1 turn"},
+    {SKILL_POWER_STRIKE, "Power Strike", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 4, 30, 1, 0, 0, 0, 0, "Strong physical attack"},
+    {SKILL_SHIELD_BASH, "Shield Bash", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 3, 20, 1, 0, 0, 0, 0, "Bash enemy with shield"},
+    {SKILL_TAUNT, "Taunt", SKILL_TYPE_DEBUFF, SCALE_STRENGTH, 2, 0, 1, 0, 0, 0, 0, "Draw enemy attention"},
+    {SKILL_GUARD, "Guard", SKILL_TYPE_BUFF, SCALE_STRENGTH, 0, 0, 0, 0, 0, 0, 0, "Double defense for 1 turn"},
 
     // Black Belt skills (scale on AGILITY)
-    {SKILL_FOCUS_STRIKE, "Focus Strike", SKILL_TYPE_ATTACK, SCALE_AGILITY, 5, 35, 1, 0, "Concentrated attack"},
-    {SKILL_COUNTER_STANCE, "Counter", SKILL_TYPE_BUFF, SCALE_AGILITY, 4, 0, 0, 0, "Counter next attack"},
-    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_BUFF, SCALE_AGILITY, 0, 10, 0, 0, "Restore 10 MP per turn for 3 turns"},
+    {SKILL_FOCUS_STRIKE, "Focus Strike", SKILL_TYPE_ATTACK, SCALE_AGILITY, 5, 35, 1, 0, 0, 0, 0, "Concentrated attack"},
+    {SKILL_COUNTER_STANCE, "Counter", SKILL_TYPE_BUFF, SCALE_AGILITY, 4, 0, 0, 0, 0, 0, 0, "Counter next attack"},
+    {SKILL_MEDITATION, "Meditation", SKILL_TYPE_BUFF, SCALE_AGILITY, 0, 10, 0, 0, 0, 0, 0, "Restore 10 MP per turn for 3 turns"},
 
     // Thief skills (scale on LUCK)
-    {SKILL_STEAL, "Steal", SKILL_TYPE_ATTACK, SCALE_LUCK, 3, 0, 1, 0, "Steal item from enemy"},
-    {SKILL_BACKSTAB, "Backstab", SKILL_TYPE_ATTACK, SCALE_LUCK, 6, 40, 1, 0, "Critical strike"},
-    {SKILL_SMOKE_BOMB, "Smoke Bomb", SKILL_TYPE_DEBUFF, SCALE_LUCK, 5, 0, 1, 1, "Flee from battle"},
+    {SKILL_STEAL, "Steal", SKILL_TYPE_STEAL, SCALE_LUCK, 3, 0, 1, 0, 0, 0, 0, "Steal item from enemy"},
+    {SKILL_BACKSTAB, "Backstab", SKILL_TYPE_ATTACK, SCALE_LUCK, 6, 40, 1, 0, 0, 0, 0, "Critical strike"},
+    {SKILL_SMOKE_BOMB, "Smoke Bomb", SKILL_TYPE_DEBUFF, SCALE_LUCK, 5, 0, 1, 1, 0, 0, 0, "Flee from battle"},
+    {SKILL_POISON_BLADE, "Poison Blade", SKILL_TYPE_ATTACK, SCALE_LUCK, 5, 20, 1, 0, STATUS_POISON, 75, 4, "Attack that poisons enemy"},
+    {SKILL_FLASH, "Flash", SKILL_TYPE_DEBUFF, SCALE_LUCK, 4, 0, 1, 0, STATUS_BLIND, 80, 3, "Blind enemy to reduce accuracy"},
 
     // Sage spells (scale on INTELLIGENCE)
-    {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 4, 25, 1, 0, "Fire magic attack"},
-    {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, "Strong fire attack"},
-    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, "Massive fire on all"},
-    {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, "Restore HP"},
-    {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, "Restore more HP"},
-    {SKILL_TRANQUILITY, "Tranquility", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 8, 0, 0, "Restore 8 MP per turn for 3 turns"},
+    {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 4, 25, 1, 0, 0, 0, 0, "Fire magic attack"},
+    {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, 0, 0, 0, "Strong fire attack"},
+    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, 0, 0, 0, "Massive fire on all"},
+    {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, 0, 0, 0, "Restore HP"},
+    {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, 0, 0, 0, "Restore more HP"},
+    {SKILL_TRANQUILITY, "Tranquility", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 8, 0, 0, 0, 0, 0, "Restore 8 MP per turn for 3 turns"},
+    {SKILL_TIME_WARP, "Time Warp", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 8, 0, 1, 0, STATUS_SLOW, 85, 4, "Slow enemy agility"},
+    {SKILL_MUTE, "Mute", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 6, 0, 1, 0, STATUS_SILENCE, 80, 3, "Silence enemy magic"},
+    {SKILL_PETRIFY, "Petrify", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 12, 0, 1, 0, STATUS_STONE, 50, 2, "Turn enemy to stone"},
 
     // Priest spells (scale on INTELLIGENCE)
-    {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 4, 50, 0, 0, "Restore HP"},
-    {SKILL_HEALA, "Heala", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 8, 100, 0, 0, "Restore lots of HP"},
-    {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, "Heal entire party"},
-    {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 6, 0, 0, 0, "Increase defense"},
-    {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 0, 0, 0, "Cure status effects"},
-    {SKILL_PRAYER, "Prayer", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 0, 20, 0, 1, "Small party heal + 5 MP regen for 2 turns"},
+    {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 4, 50, 0, 0, 0, 0, 0, "Restore HP"},
+    {SKILL_HEALA, "Heala", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 8, 100, 0, 0, 0, 0, 0, "Restore lots of HP"},
+    {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, 0, 0, 0, "Heal entire party"},
+    {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 6, 0, 0, 0, 0, 0, 0, "Increase defense"},
+    {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 0, 0, 0, 0, 0, 0, "Cure status effects"},
+    {SKILL_PRAYER, "Prayer", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 0, 20, 0, 1, 0, 0, 0, "Small party heal + 5 MP regen for 2 turns"},
+    {SKILL_BLINDING_LIGHT, "Blind Light", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 7, 0, 1, 1, STATUS_BLIND, 70, 3, "Blind all enemies"},
 
     // Mage spells (scale on INTELLIGENCE)
-    {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Lightning attack"},
-    {SKILL_BOLT2, "Bolt2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong lightning"},
-    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, "Massive lightning"},
-    {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, "Ice attack"},
-    {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, "Strong ice attack"},
-    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, "Massive ice attack"},
-    {SKILL_FOCUS, "Focus", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 12, 0, 0, "Restore 12 MP per turn for 3 turns"},
+    {SKILL_BOLT, "Bolt", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, 0, 0, 0, "Lightning attack"},
+    {SKILL_BOLT2, "Bolt2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, 0, 0, 0, "Strong lightning"},
+    {SKILL_BOLT3, "Bolt3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, 0, 0, 0, "Massive lightning"},
+    {SKILL_ICE, "Ice", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 5, 30, 1, 0, 0, 0, 0, "Ice attack"},
+    {SKILL_ICE2, "Ice2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 10, 55, 1, 0, 0, 0, 0, "Strong ice attack"},
+    {SKILL_ICE3, "Ice3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 18, 70, 1, 1, 0, 0, 0, "Massive ice attack"},
+    {SKILL_FOCUS, "Focus", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 12, 0, 0, 0, 0, 0, "Restore 12 MP per turn for 3 turns"},
+    {SKILL_SLOW, "Slow", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 6, 0, 1, 0, STATUS_SLOW, 90, 4, "Slow enemy turn order"},
+    {SKILL_SILENCE, "Silence", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 5, 0, 1, 0, STATUS_SILENCE, 85, 3, "Prevent enemy magic"},
+    {SKILL_TOXIC_CLOUD, "Toxic Cloud", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 10, 0, 1, 1, STATUS_POISON, 60, 5, "Poison all enemies"},
+    {SKILL_STONE_GAZE, "Stone Gaze", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 14, 0, 1, 0, STATUS_STONE, 45, 2, "Petrify enemy"},
 
     // Terminator
-    {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, ""}
+    {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, 0, 0, 0, ""}
 };
 
 const Skill* get_skill_data(uint8_t skill_id) {
@@ -351,7 +363,7 @@ bool character_can_use_skill(PartyMember* member, uint8_t skill_id) {
 
 void character_init_starting_skills(PartyMember* member) {
     if (!member) return;
-    
+
     switch (member->job) {
         case JOB_KNIGHT:
             character_learn_skill(member, SKILL_POWER_STRIKE);
@@ -367,6 +379,8 @@ void character_init_starting_skills(PartyMember* member) {
         case JOB_THIEF:
             character_learn_skill(member, SKILL_BACKSTAB);
             character_learn_skill(member, SKILL_STEAL);
+            character_learn_skill(member, SKILL_POISON_BLADE);  // Status effect skill
+            character_learn_skill(member, SKILL_FLASH);         // Status effect skill
             break;
 
         case JOB_SAGE:
@@ -374,6 +388,9 @@ void character_init_starting_skills(PartyMember* member) {
             character_learn_skill(member, SKILL_CURE);
             character_learn_skill(member, SKILL_BOLT);
             character_learn_skill(member, SKILL_TRANQUILITY);
+            character_learn_skill(member, SKILL_TIME_WARP);     // Status effect skill
+            character_learn_skill(member, SKILL_MUTE);          // Status effect skill
+            character_learn_skill(member, SKILL_PETRIFY);       // Status effect skill
             break;
 
         case JOB_PRIEST:
@@ -381,6 +398,7 @@ void character_init_starting_skills(PartyMember* member) {
             character_learn_skill(member, SKILL_HEALA);
             character_learn_skill(member, SKILL_ESUNA);
             character_learn_skill(member, SKILL_PRAYER);
+            character_learn_skill(member, SKILL_BLINDING_LIGHT); // Status effect skill
             break;
 
         case JOB_MAGE:
@@ -388,6 +406,10 @@ void character_init_starting_skills(PartyMember* member) {
             character_learn_skill(member, SKILL_BOLT);
             character_learn_skill(member, SKILL_ICE);
             character_learn_skill(member, SKILL_FOCUS);
+            character_learn_skill(member, SKILL_SLOW);          // Status effect skill
+            character_learn_skill(member, SKILL_SILENCE);       // Status effect skill
+            character_learn_skill(member, SKILL_TOXIC_CLOUD);   // Status effect skill
+            character_learn_skill(member, SKILL_STONE_GAZE);    // Status effect skill
             break;
 
         default:

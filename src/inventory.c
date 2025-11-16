@@ -250,6 +250,7 @@ Item item_create_consumable(uint8_t item_id) {
 }
 
 // Equipment IDs
+// Tier 1 - Starting/Early Game (0-9, 20-25, 40-42, 60-62)
 #define EQUIP_DAGGER 0
 #define EQUIP_SHORT_SWORD 1
 #define EQUIP_LONG_SWORD 2
@@ -261,6 +262,21 @@ Item item_create_consumable(uint8_t item_id) {
 #define EQUIP_NUNCHAKU 8
 #define EQUIP_IRON_NUNCHAKU 9
 
+// Tier 2 - Mid Game Weapons (10-14)
+#define EQUIP_MITHRIL_SWORD 10
+#define EQUIP_BATTLE_AXE 11
+#define EQUIP_SILVER_STAFF 12
+#define EQUIP_CRYSTAL_ROD 13
+#define EQUIP_STEEL_NUNCHAKU 14
+
+// Tier 3 - Late Game Weapons (15-19)
+#define EQUIP_FLAME_SWORD 15
+#define EQUIP_ICE_BRAND 16
+#define EQUIP_THUNDER_STAFF 17
+#define EQUIP_DIAMOND_ROD 18
+#define EQUIP_DRAGON_CLAWS 19
+
+// Tier 1 - Starting Armor (20-25)
 #define EQUIP_CLOTH_ARMOR 20
 #define EQUIP_LEATHER_ARMOR 21
 #define EQUIP_CHAIN_MAIL 22
@@ -268,13 +284,56 @@ Item item_create_consumable(uint8_t item_id) {
 #define EQUIP_ROBE 24
 #define EQUIP_SILK_ROBE 25
 
+// Tier 2 - Mid Game Armor (26-28)
+#define EQUIP_SCALE_MAIL 26
+#define EQUIP_MITHRIL_ARMOR 27
+#define EQUIP_BATTLE_ROBE 28
+
+// Tier 3 - Late Game Armor (29-31)
+#define EQUIP_DRAGON_MAIL 29
+#define EQUIP_SAGE_ROBE 30
+#define EQUIP_HOLY_ARMOR 31
+
+// Tier 4 - Legendary Armor (32-33)
+#define EQUIP_CRYSTAL_ARMOR 32
+#define EQUIP_AEGIS_MAIL 33
+
+// Tier 1 - Starting Helmets (40-42)
 #define EQUIP_LEATHER_CAP 40
 #define EQUIP_IRON_HELM 41
 #define EQUIP_WIZARD_HAT 42
 
+// Tier 2 - Mid Game Helmets (43-45)
+#define EQUIP_STEEL_HELM 43
+#define EQUIP_MYSTIC_HAT 44
+#define EQUIP_BANDANA 45
+
+// Tier 3 - Late Game Helmets (46-48)
+#define EQUIP_DRAGON_HELM 46
+#define EQUIP_CROWN_OF_WISDOM 47
+#define EQUIP_WAR_HELM 48
+
+// Tier 4 - Legendary Helmets (49)
+#define EQUIP_GENJI_HELM 49
+
+// Tier 1 - Starting Accessories (60-62)
 #define EQUIP_POWER_RING 60
 #define EQUIP_DEFENSE_RING 61
 #define EQUIP_LUCK_RING 62
+
+// Tier 2 - Mid Game Accessories (63-64)
+#define EQUIP_AGILITY_RING 63
+#define EQUIP_INTELLIGENCE_RING 64
+
+// Tier 3 - Late Game Accessories (65-67)
+#define EQUIP_GUARDIAN_AMULET 65
+#define EQUIP_SPEED_BOOTS 66
+#define EQUIP_MAGIC_GLOVES 67
+
+// Tier 4 - Legendary Accessories (68-70)
+#define EQUIP_RIBBON 68
+#define EQUIP_ELVEN_CLOAK 69
+#define EQUIP_HEROS_RING 70
 
 Item item_create_equipment(uint8_t equip_id) {
     Item item;
@@ -340,6 +399,68 @@ Item item_create_equipment(uint8_t equip_id) {
                 item.attack_bonus = 15;
                 item.usable_by_job = (1 << JOB_BLACK_BELT);
                 break;
+
+            // Tier 2 - Mid Game Weapons
+            case EQUIP_MITHRIL_SWORD:
+                strcpy(item.name, "Mithril Sword");
+                item.attack_bonus = 20;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_THIEF);
+                break;
+            case EQUIP_BATTLE_AXE:
+                strcpy(item.name, "Battle Axe");
+                item.attack_bonus = 25;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+            case EQUIP_SILVER_STAFF:
+                strcpy(item.name, "Silver Staff");
+                item.attack_bonus = 8;
+                item.intelligence_bonus = 12;
+                item.usable_by_job = (1 << JOB_PRIEST) | (1 << JOB_SAGE);
+                break;
+            case EQUIP_CRYSTAL_ROD:
+                strcpy(item.name, "Crystal Rod");
+                item.attack_bonus = 6;
+                item.intelligence_bonus = 15;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE);
+                break;
+            case EQUIP_STEEL_NUNCHAKU:
+                strcpy(item.name, "Steel Nunchaku");
+                item.attack_bonus = 22;
+                item.usable_by_job = (1 << JOB_BLACK_BELT);
+                break;
+
+            // Tier 3 - Late Game Weapons
+            case EQUIP_FLAME_SWORD:
+                strcpy(item.name, "Flame Sword");
+                item.attack_bonus = 35;
+                item.intelligence_bonus = 5;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_SAGE);
+                break;
+            case EQUIP_ICE_BRAND:
+                strcpy(item.name, "Ice Brand");
+                item.attack_bonus = 38;
+                item.agility_bonus = 3;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_THIEF);
+                break;
+            case EQUIP_THUNDER_STAFF:
+                strcpy(item.name, "Thunder Staff");
+                item.attack_bonus = 12;
+                item.intelligence_bonus = 20;
+                item.usable_by_job = (1 << JOB_PRIEST) | (1 << JOB_SAGE) | (1 << JOB_MAGE);
+                break;
+            case EQUIP_DIAMOND_ROD:
+                strcpy(item.name, "Diamond Rod");
+                item.attack_bonus = 10;
+                item.intelligence_bonus = 25;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE);
+                break;
+            case EQUIP_DRAGON_CLAWS:
+                strcpy(item.name, "Dragon Claws");
+                item.attack_bonus = 40;
+                item.agility_bonus = 5;
+                item.usable_by_job = (1 << JOB_BLACK_BELT);
+                break;
+
             default:
                 strcpy(item.name, "Unknown Weapon");
                 item.attack_bonus = 1;
@@ -381,6 +502,58 @@ Item item_create_equipment(uint8_t equip_id) {
                 item.intelligence_bonus = 4;
                 item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE) | (1 << JOB_PRIEST);
                 break;
+
+            // Tier 2 - Mid Game Armor
+            case EQUIP_SCALE_MAIL:
+                strcpy(item.name, "Scale Mail");
+                item.defense_bonus = 20;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_BLACK_BELT);
+                break;
+            case EQUIP_MITHRIL_ARMOR:
+                strcpy(item.name, "Mithril Armor");
+                item.defense_bonus = 25;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+            case EQUIP_BATTLE_ROBE:
+                strcpy(item.name, "Battle Robe");
+                item.defense_bonus = 12;
+                item.intelligence_bonus = 8;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE) | (1 << JOB_PRIEST);
+                break;
+
+            // Tier 3 - Late Game Armor
+            case EQUIP_DRAGON_MAIL:
+                strcpy(item.name, "Dragon Mail");
+                item.defense_bonus = 35;
+                item.agility_bonus = 5;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_BLACK_BELT) | (1 << JOB_THIEF);
+                break;
+            case EQUIP_SAGE_ROBE:
+                strcpy(item.name, "Sage Robe");
+                item.defense_bonus = 18;
+                item.intelligence_bonus = 15;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE) | (1 << JOB_PRIEST);
+                break;
+            case EQUIP_HOLY_ARMOR:
+                strcpy(item.name, "Holy Armor");
+                item.defense_bonus = 40;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+
+            // Tier 4 - Legendary Armor
+            case EQUIP_CRYSTAL_ARMOR:
+                strcpy(item.name, "Crystal Armor");
+                item.defense_bonus = 50;
+                item.attack_bonus = 10;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+            case EQUIP_AEGIS_MAIL:
+                strcpy(item.name, "Aegis Mail");
+                item.defense_bonus = 45;
+                item.intelligence_bonus = 10;
+                item.usable_by_job = 0xFF; // All jobs
+                break;
+
             default:
                 strcpy(item.name, "Unknown Armor");
                 item.defense_bonus = 1;
@@ -407,6 +580,55 @@ Item item_create_equipment(uint8_t equip_id) {
                 item.intelligence_bonus = 3;
                 item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE);
                 break;
+
+            // Tier 2 - Mid Game Helmets
+            case EQUIP_STEEL_HELM:
+                strcpy(item.name, "Steel Helm");
+                item.defense_bonus = 10;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+            case EQUIP_MYSTIC_HAT:
+                strcpy(item.name, "Mystic Hat");
+                item.defense_bonus = 5;
+                item.intelligence_bonus = 6;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE) | (1 << JOB_PRIEST);
+                break;
+            case EQUIP_BANDANA:
+                strcpy(item.name, "Bandana");
+                item.defense_bonus = 3;
+                item.agility_bonus = 5;
+                item.usable_by_job = (1 << JOB_THIEF) | (1 << JOB_BLACK_BELT);
+                break;
+
+            // Tier 3 - Late Game Helmets
+            case EQUIP_DRAGON_HELM:
+                strcpy(item.name, "Dragon Helm");
+                item.defense_bonus = 18;
+                item.attack_bonus = 5;
+                item.usable_by_job = (1 << JOB_KNIGHT);
+                break;
+            case EQUIP_CROWN_OF_WISDOM:
+                strcpy(item.name, "Crown of Wisdom");
+                item.defense_bonus = 10;
+                item.intelligence_bonus = 12;
+                item.usable_by_job = (1 << JOB_MAGE) | (1 << JOB_SAGE) | (1 << JOB_PRIEST);
+                break;
+            case EQUIP_WAR_HELM:
+                strcpy(item.name, "War Helm");
+                item.defense_bonus = 15;
+                item.attack_bonus = 8;
+                item.usable_by_job = (1 << JOB_KNIGHT) | (1 << JOB_BLACK_BELT);
+                break;
+
+            // Tier 4 - Legendary Helmet
+            case EQUIP_GENJI_HELM:
+                strcpy(item.name, "Genji Helm");
+                item.defense_bonus = 25;
+                item.attack_bonus = 10;
+                item.agility_bonus = 10;
+                item.usable_by_job = 0xFF; // All jobs
+                break;
+
             default:
                 strcpy(item.name, "Unknown Helm");
                 item.defense_bonus = 1;
@@ -430,6 +652,54 @@ Item item_create_equipment(uint8_t equip_id) {
                 strcpy(item.name, "Luck Ring");
                 item.agility_bonus = 3;
                 break;
+
+            // Tier 2 - Mid Game Accessories
+            case EQUIP_AGILITY_RING:
+                strcpy(item.name, "Agility Ring");
+                item.agility_bonus = 6;
+                break;
+            case EQUIP_INTELLIGENCE_RING:
+                strcpy(item.name, "Magic Ring");
+                item.intelligence_bonus = 6;
+                break;
+
+            // Tier 3 - Late Game Accessories
+            case EQUIP_GUARDIAN_AMULET:
+                strcpy(item.name, "Guardian Amulet");
+                item.defense_bonus = 12;
+                item.attack_bonus = 5;
+                break;
+            case EQUIP_SPEED_BOOTS:
+                strcpy(item.name, "Speed Boots");
+                item.agility_bonus = 12;
+                item.defense_bonus = 5;
+                break;
+            case EQUIP_MAGIC_GLOVES:
+                strcpy(item.name, "Magic Gloves");
+                item.intelligence_bonus = 12;
+                item.attack_bonus = 5;
+                break;
+
+            // Tier 4 - Legendary Accessories
+            case EQUIP_RIBBON:
+                strcpy(item.name, "Ribbon");
+                item.defense_bonus = 15;
+                item.intelligence_bonus = 10;
+                item.agility_bonus = 10;
+                break;
+            case EQUIP_ELVEN_CLOAK:
+                strcpy(item.name, "Elven Cloak");
+                item.agility_bonus = 20;
+                item.defense_bonus = 10;
+                break;
+            case EQUIP_HEROS_RING:
+                strcpy(item.name, "Hero's Ring");
+                item.attack_bonus = 15;
+                item.defense_bonus = 15;
+                item.intelligence_bonus = 15;
+                item.agility_bonus = 15;
+                break;
+
             default:
                 strcpy(item.name, "Unknown Ring");
                 break;

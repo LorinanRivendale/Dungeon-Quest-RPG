@@ -262,6 +262,52 @@ void display_party_status(void) {
     }
 }
 
+// Helper function to get status effect indicators
+static void get_status_indicators(uint8_t status_effects, char* buffer, size_t buffer_size) {
+    buffer[0] = '\0';
+    bool first = true;
+
+    if (status_effects & STATUS_POISON) {
+        strncat(buffer, "PSN", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_PARALYSIS) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "PAR", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_SLEEP) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "SLP", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_CONFUSION) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "CNF", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_BLIND) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "BLD", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_SLOW) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "SLW", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_SILENCE) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "SIL", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+    if (status_effects & STATUS_STONE) {
+        if (!first) strncat(buffer, ",", buffer_size - strlen(buffer) - 1);
+        strncat(buffer, "STN", buffer_size - strlen(buffer) - 1);
+        first = false;
+    }
+}
+
 void display_battle_scene(void) {
     // GameBoy-style battle screen layout (4 quadrants)
     // Top: Enemy sprites (left) | Enemy HP/Stats (right)
@@ -286,9 +332,18 @@ void display_battle_scene(void) {
             if (i < g_battle_state.enemy_count) {
                 Enemy* enemy = &g_battle_state.enemies[i];
                 if (enemy->is_alive) {
-                    printf("│   [%c]%-26s │ %d.%-15s HP:%4d/%4d │\n",
-                           'A' + i, enemy->name, i+1, enemy->name,
-                           enemy->current_hp, enemy->max_hp);
+                    char status_buf[32];
+                    get_status_indicators(enemy->status_effects, status_buf, sizeof(status_buf));
+
+                    if (strlen(status_buf) > 0) {
+                        printf("│   [%c]%-26s │ %d.%-10s HP:%4d/%4d [%s] │\n",
+                               'A' + i, enemy->name, i+1, enemy->name,
+                               enemy->current_hp, enemy->max_hp, status_buf);
+                    } else {
+                        printf("│   [%c]%-26s │ %d.%-15s HP:%4d/%4d │\n",
+                               'A' + i, enemy->name, i+1, enemy->name,
+                               enemy->current_hp, enemy->max_hp);
+                    }
                 } else {
                     printf("│   [X]%-26s │ %d.%-15s [DEFEATED]    │\n",
                            enemy->name, i+1, enemy->name);
@@ -308,14 +363,23 @@ void display_battle_scene(void) {
         if (i < g_game_state.party->member_count) {
             PartyMember* member = &g_game_state.party->members[i];
             char sprite_char = (member->stats.current_hp > 0) ? '@' : 'X';
+            char status_buf[32];
+            get_status_indicators(member->status_effects, status_buf, sizeof(status_buf));
 
             // Left side: sprite representation
-            // Right side: HP/MP stats
+            // Right side: HP/MP stats + status effects
             if (member->stats.current_hp > 0) {
-                printf("│   [%c]%-26s │ %-12s HP:%4d/%4d MP:%3d/%3d│\n",
-                       sprite_char, member->name, member->name,
-                       member->stats.current_hp, member->stats.max_hp,
-                       member->stats.current_mp, member->stats.max_mp);
+                if (strlen(status_buf) > 0) {
+                    printf("│   [%c]%-26s │ %-8s HP:%3d/%3d MP:%2d/%2d [%s]│\n",
+                           sprite_char, member->name, member->name,
+                           member->stats.current_hp, member->stats.max_hp,
+                           member->stats.current_mp, member->stats.max_mp, status_buf);
+                } else {
+                    printf("│   [%c]%-26s │ %-12s HP:%4d/%4d MP:%3d/%3d│\n",
+                           sprite_char, member->name, member->name,
+                           member->stats.current_hp, member->stats.max_hp,
+                           member->stats.current_mp, member->stats.max_mp);
+                }
             } else {
                 printf("│   [%c]%-26s │ %-12s [DOWN]                │\n",
                        sprite_char, member->name, member->name);

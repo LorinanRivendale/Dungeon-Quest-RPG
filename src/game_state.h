@@ -65,6 +65,14 @@ typedef struct {
     uint8_t duration;  // Turns remaining (0 = expired)
 } ActiveBuff;
 
+// Status Effect duration tracking
+#define MAX_STATUS_EFFECTS_PER_CHARACTER 4
+
+typedef struct {
+    uint16_t status_type;  // StatusEffect bitfield value (e.g., STATUS_POISON, STATUS_BLIND)
+    uint8_t duration;      // Turns remaining (0 = expired, 255 = permanent until cured)
+} ActiveStatusEffect;
+
 // Key items for dungeon completion
 typedef enum {
     KEY_ITEM_NONE = 0,
