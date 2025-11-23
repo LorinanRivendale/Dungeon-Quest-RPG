@@ -1,9 +1,11 @@
 # Makefile for Dungeon Quest RPG
 
 CC = gcc
+MINGW_CC = x86_64-w64-mingw32-gcc
 CFLAGS = -Wall -Wextra -std=c99 -O2
-LDFLAGS = 
+LDFLAGS =
 TARGET = rpg_game
+WIN_TARGET = rpg_game.exe
 
 # Directories
 SRCDIR = SRC
@@ -42,6 +44,12 @@ run: all
 debug: CFLAGS += -g -DDEBUG
 debug: clean all
 
+# Windows build (cross-compile with MinGW)
+windows:
+	@mkdir -p $(OBJDIR)
+	$(MINGW_CC) $(CFLAGS) $(SOURCES) -o $(WIN_TARGET) $(LDFLAGS)
+	@echo "Windows build complete: $(WIN_TARGET)"
+
 # Help
 help:
 	@echo "Makefile for Dungeon Quest RPG"
@@ -51,6 +59,7 @@ help:
 	@echo "  clean   - Remove build artifacts"
 	@echo "  run     - Build and run the game"
 	@echo "  debug   - Build with debug symbols"
+	@echo "  windows - Cross-compile for Windows (requires MinGW)"
 	@echo "  help    - Show this help message"
 
-.PHONY: all clean run debug help directories
+.PHONY: all clean run debug windows help directories

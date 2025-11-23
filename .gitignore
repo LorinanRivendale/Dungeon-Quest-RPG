@@ -80,3 +80,6 @@ test_output/
 GB/*.gb
 GB/*.gbc
 gbdk-linux64.tar.gz
+
+# Release packages
+release/
