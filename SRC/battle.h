@@ -33,6 +33,7 @@ typedef struct {
     uint16_t exp_reward;
     uint16_t gold_reward;
     bool is_alive;
+    bool item_stolen; // Track if Thief already stole from this enemy
     uint8_t status_effects; // Bitfield for quick checking
     ActiveBuff active_buffs[MAX_BUFFS_PER_CHARACTER];
     uint8_t buff_count;

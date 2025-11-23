@@ -643,33 +643,35 @@ void display_dungeon(void) {
     DungeonFloor* floor = &dungeon->floors[dungeon->current_floor];
     bool tile_mode = g_game_state.tile_graphics_mode;
 
-    printf("\n=== %s - Floor %d ===\n", dungeon->name, dungeon->current_floor + 1);
+    printf("\n=== %s - Floor %d (%dx%d) ===\n", dungeon->name, dungeon->current_floor + 1, floor->width, floor->height);
     if (tile_mode) {
         printf("[ TILE GRAPHICS MODE ]\n");
     }
 
-    // Display map with better visibility
-    int view_range = 5;
+    // Display using viewport system (only show visible tiles)
+    for (int screen_y = 0; screen_y < VIEWPORT_HEIGHT; screen_y++) {
+        for (int screen_x = 0; screen_x < VIEWPORT_WIDTH; screen_x++) {
+            // Calculate world coordinates from screen coordinates
+            int world_x = floor->camera_x + screen_x;
+            int world_y = floor->camera_y + screen_y;
 
-    for (int y = floor->player_y - view_range; y <= floor->player_y + view_range; y++) {
-        for (int x = floor->player_x - view_range; x <= floor->player_x + view_range; x++) {
             // Player position
-            if (x == floor->player_x && y == floor->player_y) {
+            if (world_x == floor->player_x && world_y == floor->player_y) {
                 print_tile_character(TILE_FLOOR, true, true, tile_mode);
             }
-            // Out of bounds
-            else if (x < 0 || x >= DUNGEON_WIDTH || y < 0 || y >= DUNGEON_HEIGHT) {
+            // Out of bounds (show black space if camera shows area outside map)
+            else if (world_x < 0 || world_x >= floor->width || world_y < 0 || world_y >= floor->height) {
                 printf(" ");
             }
-            // Show adjacent tiles even if not explored
+            // Show tiles within viewport
             else {
-                int dx = abs(x - floor->player_x);
-                int dy = abs(y - floor->player_y);
+                int dx = abs(world_x - floor->player_x);
+                int dy = abs(world_y - floor->player_y);
                 bool is_adjacent = (dx <= 1 && dy <= 1);
 
                 // Show tile if explored OR adjacent to player
-                bool explored = floor->tiles[y][x].explored || is_adjacent;
-                print_tile_character(floor->tiles[y][x].type, false, explored, tile_mode);
+                bool explored = floor->tiles[world_y][world_x].explored || is_adjacent;
+                print_tile_character(floor->tiles[world_y][world_x].type, false, explored, tile_mode);
             }
         }
         printf("\n");

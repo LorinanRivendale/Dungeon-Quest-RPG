@@ -102,10 +102,10 @@ typedef struct {
 
 // Sage spells
 #define SKILL_FIRE 30
-#define SKILL_FIRA 31
-#define SKILL_FIRAGA 32
+#define SKILL_FIRE2 31        // Renamed from FIRA for consistency
+#define SKILL_FIRE3 32        // Renamed from FIRAGA for consistency
 #define SKILL_CURE 33
-#define SKILL_CURA 34
+#define SKILL_CURE2 34        // Renamed from CURA for consistency
 #define SKILL_TRANQUILITY 35
 #define SKILL_TIME_WARP 36
 #define SKILL_MUTE 37
@@ -113,12 +113,16 @@ typedef struct {
 
 // Priest spells
 #define SKILL_HEAL 40
-#define SKILL_HEALA 41
-#define SKILL_HEALAGA 42
+#define SKILL_HEAL2 41        // Renamed from HEALA for consistency
+#define SKILL_HEAL3 42        // Renamed from HEALAGA for consistency
 #define SKILL_PROTECT 43
 #define SKILL_ESUNA 44
 #define SKILL_PRAYER 45
 #define SKILL_BLINDING_LIGHT 46
+#define SKILL_SHELL 47       // New: Reduce magic damage buff
+
+// Sage-specific spells
+#define SKILL_BARRIER 48     // New: Reduce physical damage buff
 
 // Mage spells
 #define SKILL_BOLT 50
@@ -132,6 +136,7 @@ typedef struct {
 #define SKILL_SILENCE 58
 #define SKILL_TOXIC_CLOUD 59
 #define SKILL_STONE_GAZE 60
+#define SKILL_FLARE 61       // New: Ultimate single-target nuke
 
 // Party member structure
 typedef struct PartyMember {

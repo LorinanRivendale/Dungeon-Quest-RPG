@@ -186,10 +186,9 @@ uint32_t character_get_exp_for_next_level(uint8_t level) {
 
 void character_gain_experience(PartyMember* member, uint32_t exp) {
     if (!member || character_has_status(member, STATUS_DEAD)) return;
-    
+
     member->stats.experience += exp;
-    printf("%s gains %d EXP!\n", member->name, exp);
-    
+
     // Check for level up
     uint32_t exp_needed = character_get_exp_for_next_level(member->stats.level);
     
@@ -213,40 +212,73 @@ void character_gain_experience(PartyMember* member, uint32_t exp) {
         
         exp_needed = character_get_exp_for_next_level(member->stats.level);
     }
-	// Inside character_gain_experience, after the level up prints:
-
-	// Learn new skills at certain levels
+	// Learn new skills/spells at certain levels
 	switch (member->job) {
 		case JOB_KNIGHT:
 			if (member->stats.level == 5) character_learn_skill(member, SKILL_TAUNT);
 			break;
-			
+
 		case JOB_BLACK_BELT:
 			if (member->stats.level == 5) character_learn_skill(member, SKILL_COUNTER_STANCE);
 			break;
-			
+
 		case JOB_THIEF:
 			if (member->stats.level == 5) character_learn_skill(member, SKILL_SMOKE_BOMB);
 			break;
-			
-		case JOB_SAGE:
-			if (member->stats.level == 5) character_learn_skill(member, SKILL_FIRA);
-			if (member->stats.level == 8) character_learn_skill(member, SKILL_CURA);
-			if (member->stats.level == 12) character_learn_skill(member, SKILL_FIRAGA);
-			break;
-			
-		case JOB_PRIEST:
-			if (member->stats.level == 5) character_learn_skill(member, SKILL_PROTECT);
-			if (member->stats.level == 10) character_learn_skill(member, SKILL_HEALAGA);
-			break;
-			
+
 		case JOB_MAGE:
-			if (member->stats.level == 4) character_learn_skill(member, SKILL_ICE2);
-			if (member->stats.level == 5) character_learn_skill(member, SKILL_BOLT2);
-			if (member->stats.level == 10) character_learn_skill(member, SKILL_ICE3);
-			if (member->stats.level == 12) character_learn_skill(member, SKILL_BOLT3);
+			// Mage spell progression (15 total spells)
+			// Starts with: Fire, Ice
+			if (member->stats.level == 3) character_learn_skill(member, SKILL_BOLT);
+			if (member->stats.level == 5) character_learn_skill(member, SKILL_SLOW);
+			if (member->stats.level == 7) {
+				character_learn_skill(member, SKILL_FIRE2);  // Fire tier 2
+				character_learn_skill(member, SKILL_SILENCE);
+			}
+			if (member->stats.level == 9) character_learn_skill(member, SKILL_ICE2);
+			if (member->stats.level == 11) character_learn_skill(member, SKILL_BOLT2);
+			if (member->stats.level == 13) character_learn_skill(member, SKILL_TOXIC_CLOUD);
+			if (member->stats.level == 15) {
+				character_learn_skill(member, SKILL_FIRE3);  // Fire tier 3
+				character_learn_skill(member, SKILL_STONE_GAZE);
+			}
+			if (member->stats.level == 17) character_learn_skill(member, SKILL_ICE3);
+			if (member->stats.level == 19) character_learn_skill(member, SKILL_BOLT3);
+			if (member->stats.level == 20) character_learn_skill(member, SKILL_FLARE);
 			break;
-					
+
+		case JOB_PRIEST:
+			// Priest spell progression (8 total spells)
+			// Starts with: Heal
+			if (member->stats.level == 3) character_learn_skill(member, SKILL_ESUNA);
+			if (member->stats.level == 5) character_learn_skill(member, SKILL_SHELL);
+			if (member->stats.level == 7) character_learn_skill(member, SKILL_PROTECT);
+			if (member->stats.level == 9) character_learn_skill(member, SKILL_HEAL2);
+			if (member->stats.level == 12) character_learn_skill(member, SKILL_PRAYER);
+			if (member->stats.level == 15) character_learn_skill(member, SKILL_BLINDING_LIGHT);
+			if (member->stats.level == 18) character_learn_skill(member, SKILL_HEAL3);
+			break;
+
+		case JOB_SAGE:
+			// Sage spell progression (13 total spells)
+			// Starts with: Fire, Cure
+			if (member->stats.level == 4) {
+				character_learn_skill(member, SKILL_ICE);
+				character_learn_skill(member, SKILL_BOLT);
+			}
+			if (member->stats.level == 6) character_learn_skill(member, SKILL_TRANQUILITY);
+			if (member->stats.level == 8) {
+				character_learn_skill(member, SKILL_FIRE2);  // Fire tier 2
+				character_learn_skill(member, SKILL_CURE2);  // Cure tier 2
+			}
+			if (member->stats.level == 10) character_learn_skill(member, SKILL_ICE2);
+			if (member->stats.level == 12) character_learn_skill(member, SKILL_BOLT2);
+			if (member->stats.level == 14) character_learn_skill(member, SKILL_TIME_WARP);
+			if (member->stats.level == 16) character_learn_skill(member, SKILL_MUTE);
+			if (member->stats.level == 18) character_learn_skill(member, SKILL_PETRIFY);
+			if (member->stats.level == 20) character_learn_skill(member, SKILL_BARRIER);
+			break;
+
 		default:
 			break;
 	}
@@ -276,10 +308,10 @@ static const Skill skill_database[] = {
 
     // Sage spells (scale on INTELLIGENCE)
     {SKILL_FIRE, "Fire", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 4, 25, 1, 0, 0, 0, 0, "Fire magic attack"},
-    {SKILL_FIRA, "Fira", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, 0, 0, 0, "Strong fire attack"},
-    {SKILL_FIRAGA, "Firaga", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, 0, 0, 0, "Massive fire on all"},
+    {SKILL_FIRE2, "Fire2", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 8, 45, 1, 0, 0, 0, 0, "Strong fire attack"},
+    {SKILL_FIRE3, "Fire3", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 16, 70, 1, 1, 0, 0, 0, "Massive fire on all"},
     {SKILL_CURE, "Cure", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 40, 0, 0, 0, 0, 0, "Restore HP"},
-    {SKILL_CURA, "Cura", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, 0, 0, 0, "Restore more HP"},
+    {SKILL_CURE2, "Cure2", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 10, 80, 0, 0, 0, 0, 0, "Restore more HP"},
     {SKILL_TRANQUILITY, "Tranquility", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 0, 8, 0, 0, 0, 0, 0, "Restore 8 MP per turn for 3 turns"},
     {SKILL_TIME_WARP, "Time Warp", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 8, 0, 1, 0, STATUS_SLOW, 85, 4, "Slow enemy agility"},
     {SKILL_MUTE, "Mute", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 6, 0, 1, 0, STATUS_SILENCE, 80, 3, "Silence enemy magic"},
@@ -287,8 +319,8 @@ static const Skill skill_database[] = {
 
     // Priest spells (scale on INTELLIGENCE)
     {SKILL_HEAL, "Heal", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 4, 50, 0, 0, 0, 0, 0, "Restore HP"},
-    {SKILL_HEALA, "Heala", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 8, 100, 0, 0, 0, 0, 0, "Restore lots of HP"},
-    {SKILL_HEALAGA, "Healaga", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, 0, 0, 0, "Heal entire party"},
+    {SKILL_HEAL2, "Heal2", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 8, 100, 0, 0, 0, 0, 0, "Restore lots of HP"},
+    {SKILL_HEAL3, "Heal3", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 12, 150, 0, 1, 0, 0, 0, "Heal entire party"},
     {SKILL_PROTECT, "Protect", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 6, 0, 0, 0, 0, 0, 0, "Increase defense"},
     {SKILL_ESUNA, "Esuna", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 5, 0, 0, 0, 0, 0, 0, "Cure status effects"},
     {SKILL_PRAYER, "Prayer", SKILL_TYPE_HEAL, SCALE_INTELLIGENCE, 0, 20, 0, 1, 0, 0, 0, "Small party heal + 5 MP regen for 2 turns"},
@@ -306,6 +338,11 @@ static const Skill skill_database[] = {
     {SKILL_SILENCE, "Silence", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 5, 0, 1, 0, STATUS_SILENCE, 85, 3, "Prevent enemy magic"},
     {SKILL_TOXIC_CLOUD, "Toxic Cloud", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 10, 0, 1, 1, STATUS_POISON, 60, 5, "Poison all enemies"},
     {SKILL_STONE_GAZE, "Stone Gaze", SKILL_TYPE_DEBUFF, SCALE_INTELLIGENCE, 14, 0, 1, 0, STATUS_STONE, 45, 2, "Petrify enemy"},
+
+    // New spells for progression system
+    {SKILL_SHELL, "Shell", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 10, 0, 0, 0, 0, 0, 0, "Reduce magic damage"},
+    {SKILL_BARRIER, "Barrier", SKILL_TYPE_BUFF, SCALE_INTELLIGENCE, 12, 0, 0, 0, 0, 0, 0, "Reduce physical damage"},
+    {SKILL_FLARE, "Flare", SKILL_TYPE_ATTACK, SCALE_INTELLIGENCE, 30, 120, 1, 0, 0, 0, 0, "Ultimate fire nuke"},
 
     // Terminator
     {SKILL_NONE, "", SKILL_TYPE_ATTACK, SCALE_STRENGTH, 0, 0, 0, 0, 0, 0, 0, ""}
@@ -384,32 +421,20 @@ void character_init_starting_skills(PartyMember* member) {
             break;
 
         case JOB_SAGE:
+            // Start with basic fire and healing (learn more as they level)
             character_learn_skill(member, SKILL_FIRE);
             character_learn_skill(member, SKILL_CURE);
-            character_learn_skill(member, SKILL_BOLT);
-            character_learn_skill(member, SKILL_TRANQUILITY);
-            character_learn_skill(member, SKILL_TIME_WARP);     // Status effect skill
-            character_learn_skill(member, SKILL_MUTE);          // Status effect skill
-            character_learn_skill(member, SKILL_PETRIFY);       // Status effect skill
             break;
 
         case JOB_PRIEST:
+            // Start with basic healing only (learn more as they level)
             character_learn_skill(member, SKILL_HEAL);
-            character_learn_skill(member, SKILL_HEALA);
-            character_learn_skill(member, SKILL_ESUNA);
-            character_learn_skill(member, SKILL_PRAYER);
-            character_learn_skill(member, SKILL_BLINDING_LIGHT); // Status effect skill
             break;
 
         case JOB_MAGE:
+            // Start with two elements only (learn more as they level)
             character_learn_skill(member, SKILL_FIRE);
-            character_learn_skill(member, SKILL_BOLT);
             character_learn_skill(member, SKILL_ICE);
-            character_learn_skill(member, SKILL_FOCUS);
-            character_learn_skill(member, SKILL_SLOW);          // Status effect skill
-            character_learn_skill(member, SKILL_SILENCE);       // Status effect skill
-            character_learn_skill(member, SKILL_TOXIC_CLOUD);   // Status effect skill
-            character_learn_skill(member, SKILL_STONE_GAZE);    // Status effect skill
             break;
 
         default:

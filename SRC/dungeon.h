@@ -13,6 +13,7 @@ void dungeon_generate_floor(Dungeon* dungeon, uint8_t floor_index);
 void dungeon_init_boss(Dungeon* dungeon, uint8_t dungeon_id);
 
 // Dungeon exploration
+void dungeon_update_camera(DungeonFloor* floor);
 bool dungeon_move_player(Dungeon* dungeon, int8_t dx, int8_t dy);
 TileType dungeon_get_current_tile(Dungeon* dungeon);
 bool dungeon_change_floor(Dungeon* dungeon, bool going_down);

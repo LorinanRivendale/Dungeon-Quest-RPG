@@ -75,6 +75,7 @@ void battle_generate_enemies(uint8_t dungeon_level, uint8_t count) {
         enemy->exp_reward = 10 + (enemy->level * 5);
         enemy->gold_reward = 5 + (enemy->level * 3);
         enemy->is_alive = true;
+        enemy->item_stolen = false; // Initialize steal tracking
         enemy->buff_count = 0;
 
         printf("Enemy %d: %s (Lv%d)\n", i+1, enemy->name, enemy->level);
@@ -214,6 +215,12 @@ void battle_process_steal(PartyMember* actor, uint8_t target_index) {
         return;
     }
 
+    // Check if already stolen from this enemy
+    if (enemy->item_stolen) {
+        printf("%s has already been stolen from!\n", enemy->name);
+        return;
+    }
+
     // Base success rate: 50% + (Luck / 2)%
     uint8_t base_success = 50 + (character_get_total_luck(actor) / 2);
     // Penalty based on enemy level
@@ -249,6 +256,7 @@ void battle_process_steal(PartyMember* actor, uint8_t target_index) {
             if (inventory_add_item(g_game_state.inventory, steal_table[i].item_type, quantity)) {
                 Item item = item_create_consumable(steal_table[i].item_type);
                 printf("%s stole %s x%d!\n", actor->name, item.name, quantity);
+                enemy->item_stolen = true; // Mark enemy as stolen from
             } else {
                 printf("%s's inventory is full!\n", actor->name);
             }
@@ -760,6 +768,42 @@ void battle_distribute_rewards(void) {
         PartyMember* member = &g_game_state.party->members[i];
         if (member->stats.current_hp > 0) {
             character_gain_experience(member, total_exp);
+        }
+    }
+
+    // Item drops from enemies (only if not boss battle and not already stolen from)
+    if (!g_battle_state.is_boss_battle) {
+        for (uint8_t i = 0; i < g_battle_state.enemy_count; i++) {
+            Enemy* enemy = &g_battle_state.enemies[i];
+
+            // Skip if this enemy was already stolen from
+            if (enemy->item_stolen) {
+                continue;
+            }
+
+            // 25% chance to drop an item
+            if (random_range(1, 100) <= 25) {
+                // Determine item based on enemy level
+                uint8_t item_id;
+                if (enemy->level <= 3) {
+                    // Low level: Basic items only (Potion, Antidote)
+                    uint8_t low_tier_items[] = {ITEM_POTION, ITEM_ANTIDOTE};
+                    item_id = low_tier_items[random_range(0, 1)];
+                } else if (enemy->level <= 7) {
+                    // Mid level: Common and uncommon items (Potion, Hi-Potion, Ether, Antidote)
+                    uint8_t mid_tier_items[] = {ITEM_POTION, ITEM_HI_POTION, ITEM_ETHER, ITEM_ANTIDOTE};
+                    item_id = mid_tier_items[random_range(0, 3)];
+                } else {
+                    // High level: All items including rare (Hi-Potion, Ether, Elixir)
+                    uint8_t high_tier_items[] = {ITEM_HI_POTION, ITEM_ETHER, ITEM_ELIXIR};
+                    item_id = high_tier_items[random_range(0, 2)];
+                }
+
+                // Add item to inventory (inventory_add_item prints "Obtained" message)
+                if (inventory_add_item(g_game_state.inventory, item_id, 1)) {
+                    printf("  %s dropped it!\n", enemy->name);
+                }
+            }
         }
     }
 }

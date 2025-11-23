@@ -112,6 +112,14 @@ void dungeon_generate_floor(Dungeon* dungeon, uint8_t floor_index) {
         // Initialize encounter counter
         floor->encounter_steps = random_range(15, 30);
     }
+
+    // Initialize floor dimensions (after map loading to avoid memset issues)
+    // TODO: Make this variable per dungeon/floor for larger dungeons
+    floor->width = 16;   // Start with small floors
+    floor->height = 16;
+
+    // Initialize camera to center on player
+    dungeon_update_camera(floor);
 }
 
 void dungeon_init_boss(Dungeon* dungeon, uint8_t dungeon_id) {
@@ -154,30 +162,58 @@ void dungeon_init_boss(Dungeon* dungeon, uint8_t dungeon_id) {
     dungeon->boss.buff_count = 0;
 }
 
+// Update camera position to follow player
+void dungeon_update_camera(DungeonFloor* floor) {
+    if (!floor) return;
+
+    // Center camera on player
+    int16_t camera_x = floor->player_x - (VIEWPORT_WIDTH / 2);
+    int16_t camera_y = floor->player_y - (VIEWPORT_HEIGHT / 2);
+
+    // Clamp camera to map bounds (prevent showing black space)
+    if (camera_x < 0) camera_x = 0;
+    if (camera_y < 0) camera_y = 0;
+
+    if (camera_x + VIEWPORT_WIDTH > floor->width) {
+        camera_x = floor->width - VIEWPORT_WIDTH;
+        if (camera_x < 0) camera_x = 0; // Floor smaller than viewport
+    }
+    if (camera_y + VIEWPORT_HEIGHT > floor->height) {
+        camera_y = floor->height - VIEWPORT_HEIGHT;
+        if (camera_y < 0) camera_y = 0; // Floor smaller than viewport
+    }
+
+    floor->camera_x = (uint8_t)camera_x;
+    floor->camera_y = (uint8_t)camera_y;
+}
+
 bool dungeon_move_player(Dungeon* dungeon, int8_t dx, int8_t dy) {
     if (!dungeon) return false;
-    
+
     DungeonFloor* floor = &dungeon->floors[dungeon->current_floor];
-    
+
     int new_x = floor->player_x + dx;
     int new_y = floor->player_y + dy;
-    
-    // Check bounds
-    if (new_x < 0 || new_x >= DUNGEON_WIDTH || new_y < 0 || new_y >= DUNGEON_HEIGHT) {
+
+    // Check bounds (use actual floor dimensions)
+    if (new_x < 0 || new_x >= floor->width || new_y < 0 || new_y >= floor->height) {
         return false;
     }
-    
+
     // Check if tile is walkable
     TileType tile = floor->tiles[new_y][new_x].type;
     if (tile == TILE_WALL) {
         return false;
     }
-    
+
     // Move player
     floor->player_x = new_x;
     floor->player_y = new_y;
     floor->tiles[new_y][new_x].explored = true;
-    
+
+    // Update camera to follow player
+    dungeon_update_camera(floor);
+
     return true;
 }
 

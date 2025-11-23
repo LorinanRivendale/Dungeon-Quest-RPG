@@ -13,8 +13,12 @@
 #define MAX_EQUIPMENT_SLOTS 20
 #define MAX_NAME_LENGTH 12
 #define MAX_DUNGEON_NAME 20
-#define DUNGEON_WIDTH 16
-#define DUNGEON_HEIGHT 16
+#define DUNGEON_WIDTH 32   // Max width (supports 16x16, 24x24, 32x32)
+#define DUNGEON_HEIGHT 32  // Max height
+
+// Viewport size (visible area on screen)
+#define VIEWPORT_WIDTH 18
+#define VIEWPORT_HEIGHT 16
 #define MAX_DUNGEON_FLOORS 5
 
 // Job types enumeration
@@ -103,9 +107,13 @@ typedef struct {
 
 // Dungeon floor
 typedef struct {
+    uint8_t width;           // Actual width (16, 24, or 32)
+    uint8_t height;          // Actual height (16, 24, or 32)
     DungeonTile tiles[DUNGEON_HEIGHT][DUNGEON_WIDTH];
     uint8_t player_x;
     uint8_t player_y;
+    uint8_t camera_x;        // Camera position (top-left of viewport)
+    uint8_t camera_y;
     uint8_t encounter_steps; // Steps until next encounter (step-counter system)
 } DungeonFloor;
 
