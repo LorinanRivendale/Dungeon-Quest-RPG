@@ -2,7 +2,7 @@
 
 **Total Maps: 58-60**
 **Map Data Size: ~60 KB**
-**Status:** 0/60 Complete
+**Status:** 5/60 Complete (8.3%)
 
 ---
 
@@ -11,17 +11,47 @@
 **Estimated Time:** Core development phase
 **Priority:** HIGH
 
-### World Map (1 map) - CRITICAL
-- [ ] `world_map.tmx` - 64×64 tiles (4 KB)
-  - Shows all 8 towns and dungeon entrances
-  - Region-based encounter zones
-  - Fast travel system integration
+### World Map (1 map) - CRITICAL ✅ COMPLETE
+- [x] `world_map` - 128×128 tiles (32 KB: 16 KB tiles + 16 KB zones)
+  - ✅ Shows all 8 towns properly placed
+  - ✅ All 9 dungeon entrances positioned
+  - ✅ Region-based encounter zones (9 zone types)
+  - ✅ Fast travel system integration
+  - ✅ Ocean borders, varied terrain (mountains, forest, desert, grassland, coast)
+  - **Files:** `SRC/world_map.h`, `SRC/world_map.c`, `WORLD_MAP_GUIDE.md`
+  - **Tools:** `generate_world_map.py`, `visualize_map.py`
+  - **Tileset:** Final Fantasy NES Overworld tileset
+  - **Preview:** `world_map_preview.html`
 
 ### Main Towns - Exteriors Only (4 maps) - CRITICAL
-- [ ] `greenleaf_exterior.tmx` - 32×32 tiles (Starter town)
-- [ ] `coral_bay_exterior.tmx` - 32×32 tiles (Port town)
-- [ ] `emberforge_exterior.tmx` - 32×32 tiles (Mountain town)
-- [ ] `windspire_exterior.tmx` - 32×32 tiles (Sky town)
+- [x] **Greenleaf** - 32×32 tiles (Starter town) ✅ COMPLETE
+  - Inn (NW), Item Shop (E), Equipment Shop (SE)
+  - 3 Houses, Town Well, Trees, Fences, Path network
+  - **Files:** `SRC/greenleaf_map.c`, `SRC/town_map.h`
+  - **Tools:** `generate_greenleaf_corneria.py`, `visualize_town.py`
+  - **Tileset:** Corneria Sprites (Final Fantasy NES) - 16x16 metasprites
+  - **Preview:** `greenleaf_preview.html`
+- [x] **Coral Bay** - 32×32 tiles (Coastal fishing village) ✅ COMPLETE
+  - Inn, Item Shop, Equipment Shop, 3 Houses
+  - Harbor with docks, Water, Well, Trees, Fences
+  - **Files:** `SRC/coral_bay_map.c`
+  - **Tools:** `generate_coral_bay.py`
+  - **Tileset:** Corneria Sprites (Final Fantasy NES)
+  - **Preview:** `coral_bay_preview.html`
+- [x] **Emberforge** - 32×32 tiles (Mountain mining town) ✅ COMPLETE
+  - Inn, Item Shop, Equipment Shop, 3 Houses
+  - Mine entrance (north), Well, Trees, Fences, Cross paths
+  - **Files:** `SRC/emberforge_map.c`
+  - **Tools:** `generate_emberforge.py`
+  - **Tileset:** Corneria Sprites (Final Fantasy NES)
+  - **Preview:** `emberforge_preview.html`
+- [x] **Windspire** - 32×32 tiles (Highland sky town) ✅ COMPLETE
+  - Inn, Item Shop, Equipment Shop, 3 Houses
+  - Highland platform, Mountain spring, Well, Trees, Fences
+  - **Files:** `SRC/windspire_map.c`
+  - **Tools:** `generate_windspire.py`
+  - **Tileset:** Corneria Sprites (Final Fantasy NES)
+  - **Preview:** `windspire_preview.html`
 
 ### Main Dungeon: Cave of Earth (4 maps) - CRITICAL
 - [ ] `cave_floor0.tmx` - 16×16 tiles (Entry/tutorial)
@@ -55,7 +85,7 @@
 - [ ] `sanctum_floor4.tmx` - 32×32 tiles (Final boss arena)
 
 **Phase 1 Total:** 26 maps
-**Phase 1 Progress:** 0/26 (0%)
+**Phase 1 Progress:** 5/26 (19.2%)
 
 ---
 
